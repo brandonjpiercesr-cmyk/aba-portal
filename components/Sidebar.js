@@ -1,0 +1,61 @@
+'use client';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const NAV = [
+  { group: 'Overview', items: [
+    { href: '/', label: 'Dashboard' },
+    { href: '/activity', label: 'Live Activity' },
+  ]},
+  { group: 'Agents', items: [
+    { href: '/agents', label: 'Agent JDs' },
+  ]},
+  { group: 'Brain', items: [
+    { href: '/brain', label: 'Memory Search' },
+    { href: '/training', label: 'CCWA Training' },
+  ]},
+  { group: 'Email', items: [
+    { href: '/email', label: 'Email Audit' },
+  ]},
+  { group: 'OMI / TASTE', items: [
+    { href: '/omi', label: 'Transcripts' },
+    { href: '/taste', label: 'TASTE Batches' },
+    { href: '/proactive', label: 'Proactive Events' },
+  ]},
+  { group: 'AWA', items: [
+    { href: '/awa', label: 'Jobs & Applications' },
+  ]},
+  { group: 'Infrastructure', items: [
+    { href: '/render', label: 'Render Services' },
+    { href: '/errors', label: 'Error Log' },
+    { href: '/env', label: 'Env Variables' },
+  ]},
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  return (
+    <aside className="w-56 bg-card border-r border-border flex-shrink-0 overflow-y-auto h-screen sticky top-0">
+      <div className="px-4 py-4 border-b border-border">
+        <h1 className="text-sm font-bold text-white"><span className="text-accent">ABA</span> Portal</h1>
+        <p className="text-[10px] text-dim mt-0.5">v1.0.0</p>
+      </div>
+      {NAV.map(g => (
+        <div key={g.group} className="py-1">
+          <div className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-dim mt-2">{g.group}</div>
+          {g.items.map(item => {
+            const active = pathname === item.href;
+            return (
+              <Link key={item.href} href={item.href}
+                className={`block px-4 py-1.5 text-xs border-l-[3px] transition-all ${
+                  active ? 'bg-[#1a1a2e] border-accent text-white' : 'border-transparent text-gray-400 hover:bg-[#1a1a2e] hover:text-white'
+                }`}>
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </aside>
+  );
+}

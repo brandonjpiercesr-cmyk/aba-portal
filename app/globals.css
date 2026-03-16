@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0a0a0f;
+  --card: #111118;
+  --border: #1e1e2e;
+  --dim: #666;
+  --accent: #6366f1;
+}
+
+body { background: var(--bg); color: #d0d0d0; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--dim); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); z-index: 1; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: top; }
+tr:hover td { background: #1a1a2e; }
+
+/* Inputs */
+input, textarea, select {
+  background: #0a0a0f; border: 1px solid var(--border); color: #d0d0d0;
+  padding: 7px 10px; border-radius: 5px; font-size: 12px; font-family: inherit; width: 100%;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+
+/* Mono */
+.mono { font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace; font-size: 11px; }
+
+/* Pre */
+pre { white-space: pre-wrap; word-break: break-all; }
