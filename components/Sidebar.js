@@ -30,6 +30,7 @@ const NAV = [
     { href: '/vercel', label: 'Vercel Projects' },
     { href: '/errors', label: 'Error Log' },
     { href: '/env', label: 'Env Variables' },
+    { href: '/continuity', label: 'Business Continuity' },
   ]},
 ];
 

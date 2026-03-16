@@ -3,37 +3,78 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0a0a0f;
-  --card: #111118;
-  --border: #1e1e2e;
+  --bg: #060610;
+  --card: rgba(17, 17, 24, 0.7);
+  --card-solid: #111118;
+  --border: rgba(255,255,255,0.06);
   --dim: #666;
   --accent: #6366f1;
+  --glass: rgba(255,255,255,0.03);
 }
 
-body { background: var(--bg); color: #d0d0d0; }
+body { background: var(--bg); color: #d0d0d0; position: relative; overflow-x: hidden; }
+
+/* Animated gradient background */
+body::before {
+  content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(59,130,246,0.05) 0%, transparent 50%);
+  animation: bgDrift 30s ease-in-out infinite alternate;
+  z-index: -1; pointer-events: none;
+}
+@keyframes bgDrift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(2%, -3%) rotate(1deg); }
+  66% { transform: translate(-1%, 2%) rotate(-0.5deg); }
+  100% { transform: translate(1%, -1%) rotate(0.5deg); }
+}
+
+/* Glass morphism cards */
+.glass-card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #555; }
 
 /* Table */
 table { width: 100%; border-collapse: collapse; }
-th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--dim); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); z-index: 1; }
-td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: top; }
-tr:hover td { background: #1a1a2e; }
+th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--dim); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card-solid); z-index: 1; }
+td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 12px; vertical-align: top; }
+tr:hover td { background: rgba(99,102,241,0.04); }
 
 /* Inputs */
 input, textarea, select {
-  background: #0a0a0f; border: 1px solid var(--border); color: #d0d0d0;
-  padding: 7px 10px; border-radius: 5px; font-size: 12px; font-family: inherit; width: 100%;
+  background: rgba(10,10,15,0.8); border: 1px solid var(--border); color: #d0d0d0;
+  padding: 7px 10px; border-radius: 6px; font-size: 12px; font-family: inherit; width: 100%;
+  backdrop-filter: blur(4px);
 }
-input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
 textarea { resize: vertical; min-height: 80px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
 
-/* Mono */
 .mono { font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace; font-size: 11px; }
-
-/* Pre */
 pre { white-space: pre-wrap; word-break: break-all; }
+
+/* ABA Chat Panel */
+.aba-panel { position: fixed; right: 0; top: 0; width: 400px; height: 100vh; z-index: 90;
+  background: rgba(10,10,20,0.95); backdrop-filter: blur(20px); border-left: 1px solid var(--border);
+  transform: translateX(100%); transition: transform 0.3s ease; }
+.aba-panel.open { transform: translateX(0); }
+
+/* Context menu */
+.ctx-menu { position: fixed; z-index: 100; background: rgba(17,17,24,0.95); backdrop-filter: blur(12px);
+  border: 1px solid var(--border); border-radius: 8px; padding: 4px 0; min-width: 200px; }
+.ctx-item { padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.ctx-item:hover { background: rgba(99,102,241,0.1); }
+
+/* Auth overlay */
+.auth-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+  background: rgba(6,6,16,0.98); backdrop-filter: blur(20px); }
