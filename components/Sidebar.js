@@ -27,6 +27,7 @@ const NAV = [
   ]},
   { group: 'Infrastructure', items: [
     { href: '/render', label: 'Render Services' },
+    { href: '/vercel', label: 'Vercel Projects' },
     { href: '/errors', label: 'Error Log' },
     { href: '/env', label: 'Env Variables' },
   ]},
@@ -37,8 +38,8 @@ export default function Sidebar() {
   return (
     <aside className="w-56 bg-card border-r border-border flex-shrink-0 overflow-y-auto h-screen sticky top-0">
       <div className="px-4 py-4 border-b border-border">
-        <h1 className="text-sm font-bold text-white"><span className="text-accent">ABA</span> Portal</h1>
-        <p className="text-[10px] text-dim mt-0.5">v1.0.0</p>
+        <h1 className="text-sm font-bold text-white"><span className="text-accent">AOA</span> Portal</h1>
+        <p className="text-[10px] text-dim mt-0.5">Admin Operations for ABA</p>
       </div>
       {NAV.map(g => (
         <div key={g.group} className="py-1">

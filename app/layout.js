@@ -1,7 +1,7 @@
 import './globals.css';
 import Sidebar from '../components/Sidebar';
 
-export const metadata = { title: 'ABA Portal', description: 'Admin portal for ABACIA Services' };
+export const metadata = { title: 'AOA Portal', description: 'AOA Portal - Admin Operations for ABA' };
 
 export default function RootLayout({ children }) {
   return (
