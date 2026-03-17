@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
 import AnimatedBackground from './Background';
+import AlertBanner from './AlertBanner';
 import { AuthGate, ABAChatPanel, useABAChat, ContextMenu } from './ABAChat';
 
 export default function Shell({ children }) {
@@ -23,6 +24,7 @@ export default function Shell({ children }) {
       <div className="flex min-h-screen relative z-[1]" onContextMenu={handleContextMenu}>
         <Sidebar />
         <main className="flex-1 overflow-y-auto p-5 min-h-screen">
+          <AlertBanner />
           {children}
         </main>
         <ABAChatPanel chat={chat} />
