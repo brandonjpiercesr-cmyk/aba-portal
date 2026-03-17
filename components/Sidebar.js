@@ -37,7 +37,7 @@ const NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="w-56 bg-card border-r border-border flex-shrink-0 overflow-y-auto h-screen sticky top-0">
+    <aside className="w-56 bg-[rgba(17,17,26,0.8)] backdrop-blur-xl border-r border-white/[0.04] flex-shrink-0 overflow-y-auto h-screen sticky top-0">
       <div className="px-4 py-4 border-b border-border">
         <h1 className="text-sm font-bold text-white"><span className="text-accent">AOA</span> Portal</h1>
         <p className="text-[10px] text-dim mt-0.5">Admin Operations for ABA</p>

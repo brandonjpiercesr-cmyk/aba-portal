@@ -1,13 +1,13 @@
 'use client';
 import { useState } from 'react';
 import Sidebar from './Sidebar';
+import AnimatedBackground from './Background';
 import { AuthGate, ABAChatPanel, useABAChat, ContextMenu } from './ABAChat';
 
 export default function Shell({ children }) {
   const chat = useABAChat();
   const [ctxMenu, setCtxMenu] = useState({ x: null, y: null, item: null });
 
-  // Global right-click handler - any element with data-aba-ctx triggers context menu
   function handleContextMenu(e) {
     const target = e.target.closest('[data-aba-ctx]');
     if (target) {
@@ -19,7 +19,8 @@ export default function Shell({ children }) {
 
   return (
     <AuthGate>
-      <div className="flex min-h-screen" onContextMenu={handleContextMenu}>
+      <AnimatedBackground />
+      <div className="flex min-h-screen relative z-[1]" onContextMenu={handleContextMenu}>
         <Sidebar />
         <main className="flex-1 overflow-y-auto p-5 min-h-screen">
           {children}
