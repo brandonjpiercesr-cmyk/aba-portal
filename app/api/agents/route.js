@@ -6,9 +6,8 @@ export async function GET(req) {
     const sb = getSupabase();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    const source = searchParams.get('source'); // 'table', 'memory', or 'all' (default)
+    const source = searchParams.get('source');
 
-    // Single agent by ID (from aba_agent_jds table)
     if (id) {
       const { data, error } = await sb.from('aba_agent_jds').select('*').eq('id', id).single();
       if (error) throw error;
@@ -17,13 +16,26 @@ export async function GET(req) {
 
     const results = { table_agents: [], memory_agents: [], count: 0 };
 
-    // Pull from aba_agent_jds table (structured JDs)
     if (source !== 'memory') {
       const { data, error } = await sb.from('aba_agent_jds').select('*').order('agent_id', { ascending: true });
-      if (!error && data) results.table_agents = data;
+      if (!error && data) {
+        // Auto-load last 5 actions for EVERY agent
+        for (const agent of data) {
+          const tag = agent.agent_id.toLowerCase();
+          try {
+            const { data: actions } = await sb.from('aba_memory')
+              .select('id, source, memory_type, content, created_at')
+              .or(`tags.cs.{${tag}},source.ilike.%${tag}%`)
+              .not('memory_type', 'in', '(aba_agents,agent_jd)')
+              .order('created_at', { ascending: false })
+              .limit(5);
+            agent.recent_actions = actions || [];
+          } catch { agent.recent_actions = []; }
+        }
+        results.table_agents = data;
+      }
     }
 
-    // Pull from aba_memory where memory_type=aba_agents (full JDs stored in brain)
     if (source !== 'table') {
       const { data, error } = await sb.from('aba_memory')
         .select('id, source, memory_type, content, created_at, importance, tags')
@@ -44,25 +56,15 @@ export async function PUT(req) {
     const sb = getSupabase();
     const body = await req.json();
     const { id, target, ...updates } = body;
-
-    // Edit in aba_agent_jds table
-    if (target === 'table' || !target) {
-      const { data, error } = await sb.from('aba_agent_jds').update(updates).eq('id', id).select();
-      if (error) throw error;
-      return NextResponse.json({ data: data[0], target: 'aba_agent_jds' });
-    }
-
-    // Edit in aba_memory (update content field)
     if (target === 'memory') {
       const { data, error } = await sb.from('aba_memory').update({ content: updates.content }).eq('id', id).select();
       if (error) throw error;
       return NextResponse.json({ data: data[0], target: 'aba_memory' });
     }
-
-    return NextResponse.json({ error: 'Invalid target' }, { status: 400 });
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+    const { data, error } = await sb.from('aba_agent_jds').update(updates).eq('id', id).select();
+    if (error) throw error;
+    return NextResponse.json({ data: data[0], target: 'aba_agent_jds' });
+  } catch (err) { return NextResponse.json({ error: err.message }, { status: 500 }); }
 }
 
 export async function POST(req) {
@@ -72,7 +74,5 @@ export async function POST(req) {
     const { data, error } = await sb.from('aba_agent_jds').insert(body).select();
     if (error) throw error;
     return NextResponse.json({ data: data[0] });
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (err) { return NextResponse.json({ error: err.message }, { status: 500 }); }
 }
