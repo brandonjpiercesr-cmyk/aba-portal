@@ -63,7 +63,7 @@ export default function AnimatedBackground() {
         backgroundImage: `url(${BACKGROUNDS[currentIdx].url})`,
         backgroundSize: 'cover', backgroundPosition: 'center',
         animation: 'aoa-kenburns-a 30s ease-in-out infinite alternate',
-        opacity: 0.5,
+        opacity: 0.85,
         transition: 'opacity 2s ease',
       }} />
 
@@ -74,14 +74,14 @@ export default function AnimatedBackground() {
           backgroundImage: `url(${BACKGROUNDS[nextIdx].url})`,
           backgroundSize: 'cover', backgroundPosition: 'center',
           animation: 'aoa-kenburns-b 30s ease-in-out infinite alternate, aoa-fadein 2s ease forwards',
-          opacity: 0.5,
+          opacity: 0.85,
         }} />
       )}
 
       {/* Dark overlay for readability */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(180deg, rgba(6,6,16,0.55) 0%, rgba(6,6,16,0.65) 50%, rgba(6,6,16,0.55) 100%)',
+        background: 'linear-gradient(180deg, rgba(6,6,16,0.3) 0%, rgba(6,6,16,0.4) 50%, rgba(6,6,16,0.3) 100%)',
       }} />
 
       {/* Subtle purple accent glow */}
