@@ -160,7 +160,25 @@ export async function GET(req) {
         : `Found ${allResults.length} related records but could not pinpoint the exact trigger. Check the records below.`;
     }
 
-    return NextResponse.json({ trace, explanation, total: allResults.length });
+    // CODE PATH IDENTIFICATION - the receipts
+    let codePaths = [];
+    try {
+      const { identifyCodePath } = require('../../../../lib/codePaths');
+      codePaths = identifyCodePath(allResults);
+    } catch (e) { console.log('Code path map not available:', e.message); }
+
+    // Build detailed explanation from code paths
+    if (codePaths.length > 0) {
+      explanation = '';
+      for (const cp of codePaths) {
+        explanation += cp.trigger + '\n\n';
+        explanation += 'CODE PATH:\n' + cp.chain.map((s, i) => `${i + 1}. ${s}`).join('\n') + '\n\n';
+        explanation += 'FILES:\n' + cp.files.map(f => `• ${f.file} (line ${f.line || '?'}) → ${f.fn}`).join('\n') + '\n\n';
+        explanation += 'HOW TO STOP: ' + cp.howToStop + '\n';
+      }
+    }
+
+    return NextResponse.json({ trace, explanation, codePaths, total: allResults.length });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

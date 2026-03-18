@@ -84,7 +84,18 @@ export default function EmailPage() {
             <div className="glass-card p-3 text-sm text-dim">This email was sent by a human, not by ABA. No automated trigger.</div>
           ) : tracing ? <Loading text="Tracing code path..." /> : trace ? (
             <div className="space-y-3">
-              <div className="glass-card p-3 text-sm">{trace.explanation}</div>
+              <div className="space-y-3">
+                <pre className="glass-card p-3 text-xs whitespace-pre-wrap text-gray-300">{trace.explanation}</pre>
+                {trace.codePaths?.map((cp, i) => (
+                  <div key={i} className="glass-card p-3 space-y-2">
+                    <div className="text-xs font-semibold text-accent">Code Path: {cp.id}</div>
+                    <div className="text-xs text-white">{cp.trigger}</div>
+                    <div className="text-[10px] text-dim mt-1">{(cp.chain||[]).map((s,j) => <div key={j}>{j+1}. {s}</div>)}</div>
+                    <div className="mt-2">{(cp.files||[]).map((f,j) => <div key={j} className="text-[10px] mono text-yellow-400">{f.file} (line {f.line||'?'}) → {f.fn}</div>)}</div>
+                    <div className="text-xs text-red-400 mt-1">Stop: {cp.howToStop}</div>
+                  </div>
+                ))}
+              </div>
               {trace.trace?.send_logs?.length>0&&<div><span className="text-dim text-[10px]">Send Logs ({trace.trace.send_logs.length})</span>
                 {trace.trace.send_logs.map(l=><div key={l.id} className="text-xs mt-1 text-dim">{friendlyDate(l.created_at)}: {(l.content||'').slice(0,150)}</div>)}</div>}
               {trace.trace?.task_logs?.length>0&&<div><span className="text-dim text-[10px]">Task Logs ({trace.trace.task_logs.length})</span>

@@ -33,6 +33,7 @@ const NAV = [
     { href: '/cost', label: 'Cost Dashboard' },
     { href: '/continuity', label: 'Continuity' },
     { href: '/errors', label: 'Error Log' },
+    { href: '/code', label: 'Code Explorer' },
   ]},
 ];
 
