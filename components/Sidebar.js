@@ -6,6 +6,7 @@ const NAV = [
   { group: 'Command', items: [
     { href: '/', label: 'Dashboard' },
     { href: '/approve', label: 'Approval Queue' },
+    { href: '/killswitch', label: 'Kill Switches' },
     { href: '/activity', label: 'Live Activity' },
   ]},
   { group: 'Agents', items: [
