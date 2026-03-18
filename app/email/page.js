@@ -25,7 +25,7 @@ export default function EmailPage() {
 
   async function traceEmail(email) {
     setViewing(email); setTracing(true); setTrace(null);
-    const d = await fetch(`/api/email/trace?subject=${encodeURIComponent(email.subject)}&id=${email.id}&thread=${email.thread_id||''}&to=${encodeURIComponent((email.to||[])[0]||'')}`).then(r=>r.json());
+    const d = await fetch(`/api/email/trace?subject=${encodeURIComponent(email.subject)}&id=${email.id}&thread=${email.thread_id||''}&to=${encodeURIComponent((email.to||[])[0]||'')}&date=${encodeURIComponent(email.date||'')}`).then(r=>r.json());
     setTrace(d); setTracing(false);
   }
 
