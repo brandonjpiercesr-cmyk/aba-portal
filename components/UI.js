@@ -63,12 +63,12 @@ export const shortTime=friendlyTime;
 export const shortDate=friendlyDate;
 
 export function describeType(type) {
-  const map={'omi_transcript':'Raw OMI audio','omi_proactive_context':'ABA noticed something','omi_proactive_execution':'ABA took action','email_dedup':'Email send confirmed','email_sent':'ABA sent email','email_task_processed':'Email processed as task','taste_batch_summary':'TASTE compiled sessions','taste_batch_result':'TASTE processed session','ccwa_training_note':'Training note','aba_command_executed':'Voice command executed','aba_agents':'Agent JD','identity_required':'Voice rejected (no ID)','writing_standards':'Writing rules','approval_queue':'Waiting for approval','awa_job':'Job listing','awa_application_sent':'Application sent','think_cycle':'Proactive thinking loop','shadow_audit':'Shadow audit log','air_trace':'AIR execution trace','command_center_activity':'Command center activity'};
+  const map={'omi_transcript':'Raw OMI audio','omi_proactive_context':'ABA noticed something','omi_proactive_execution':'ABA took action','email_dedup':'Email send confirmed','email_sent':'ABA sent email','email_task_processed':'Email processed as task','taste_batch_summary':'TASTE compiled sessions','taste_batch_result':'TASTE processed session','ccwa_training_note':'Training note','aba_command_executed':'Voice command executed','aba_agents':'Agent JD','identity_required':'Voice rejected (no ID)','writing_standards':'Writing rules','approval_queue':'Waiting for approval','awa_job':'Job listing','awa_application_sent':'Application sent','think_cycle':'Proactive thinking loop','shadow_audit':'Shadow audit log','air_trace':'AIR execution trace','command_center_activity':'Command center activity','bug_report':'🐛 Bug Report','workflow_log':'📊 Workflow','ham_preferences':'⚙️ User Preferences','ham_profile':'👤 HAM Profile','nylas_grant':'🔗 Email Connected','push_subscription':'🔔 Push Subscription','session_memo':'📝 Session Memo','checkpoint':'✅ Checkpoint','911_rule':'🚨 911 Rule','dawn_briefing':'🌅 DAWN Briefing','aba_memo':'💬 Memo','decision_record':'⚡ Decision','scheduled_task':'⏰ Scheduled Task','omi_session_consolidated':'🎧 OMI Session'};
   return map[type]||type;
 }
 
 export function isSignificantActivity(item) {
-  const noise=['omi_transcript','omi_heartbeat','omi_request_log'];
+  const noise=['omi_transcript','omi_heartbeat','omi_request_log','workflow_log'];
   if(noise.includes(item.memory_type)) return false;
   if(item.source?.startsWith('omi_stream_')) return false;
   if(item.memory_type==='omi_proactive_context'&&item.importance<5) return false;
