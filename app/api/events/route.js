@@ -13,7 +13,7 @@ export async function GET(req) {
 
     let query = sb.from('aba_memory')
       .select('content, created_at, source, tags')
-      .eq('memory_type', 'aba_event')
+      .in('memory_type', ['aba_event', 'air_event_log'])
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(limit);
