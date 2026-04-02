@@ -8,6 +8,7 @@ const NAV = [
     { href: '/approve', label: 'Approval Queue' },
     { href: '/killswitch', label: 'Kill Switches' },
     { href: '/activity', label: 'Live Activity' },
+    { href: '/events', label: 'Event Feed' },
   ]},
   { group: 'Agents', items: [
     { href: '/agents', label: 'Agent JDs' },
