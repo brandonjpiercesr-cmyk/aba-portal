@@ -4,76 +4,116 @@ import { getSupabase } from '../../../lib/supabase';
 export async function GET() {
   try {
     const sb = getSupabase();
-    const since24h = new Date(Date.now() - 86400000).toISOString();
-    const since7d = new Date(Date.now() - 7 * 86400000).toISOString();
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const weekStart = new Date(now - 7 * 86400000).toISOString();
+    const hourAgo = new Date(now - 3600000).toISOString();
 
-    // Count AIR executions (each one is an Anthropic API call)
-    const { count: airCalls24h } = await sb.from('aba_memory')
-      .select('id', { count: 'exact', head: true })
-      .or('memory_type.eq.aba_command_executed,source.ilike.%air_trace%')
-      .gte('created_at', since24h);
+    // Real cost tracking data from brain
+    const { data: todayData } = await sb.from('aba_memory')
+      .select('content, created_at')
+      .eq('memory_type', 'cost_tracking')
+      .gte('created_at', todayStart)
+      .order('created_at', { ascending: false })
+      .limit(500);
 
-    // Count proactive cron runs
-    const { count: cronRuns24h } = await sb.from('aba_memory')
-      .select('id', { count: 'exact', head: true })
-      .eq('memory_type', 'think_cycle')
-      .gte('created_at', since24h);
+    const { data: weekData } = await sb.from('aba_memory')
+      .select('content')
+      .eq('memory_type', 'cost_tracking')
+      .gte('created_at', weekStart)
+      .limit(2000);
 
-    // Count emails sent (Nylas usage)
-    const { count: emailsSent24h } = await sb.from('aba_memory')
-      .select('id', { count: 'exact', head: true })
-      .eq('memory_type', 'email_dedup')
-      .gte('created_at', since24h);
+    // Aggregate
+    let todayTotal = 0, todayCalls = 0, todayByModel = {}, todayByChannel = {}, todayByType = {};
+    let lastHourTotal = 0, lastHourCalls = 0;
+    let todayInput = 0, todayOutput = 0, todayCacheRead = 0, todayCacheCreate = 0;
+    let recentCalls = [];
 
-    // Count VARA calls
-    const { count: varaCalls24h } = await sb.from('aba_memory')
-      .select('id', { count: 'exact', head: true })
-      .ilike('source', '%vara%call%')
-      .gte('created_at', since24h);
+    for (const row of (todayData || [])) {
+      try {
+        const e = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+        const cost = e.cost_usd || 0;
+        todayTotal += cost;
+        todayCalls++;
+        todayInput += e.input_tokens || 0;
+        todayOutput += e.output_tokens || 0;
+        todayCacheRead += e.cache_read_input_tokens || 0;
+        todayCacheCreate += e.cache_creation_input_tokens || 0;
 
-    // Count brain writes (Supabase usage)
-    const { count: brainWrites24h } = await sb.from('aba_memory')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', since24h);
+        const model = (e.model || 'unknown').replace('claude-', '').replace('-20260217', '');
+        todayByModel[model] = (todayByModel[model] || 0) + cost;
+        const ch = e.channel || 'unknown';
+        todayByChannel[ch] = (todayByChannel[ch] || 0) + cost;
+        const ct = e.call_type || 'unknown';
+        todayByType[ct] = (todayByType[ct] || 0) + cost;
 
-    // 7 day counts
-    const { count: airCalls7d } = await sb.from('aba_memory')
-      .select('id', { count: 'exact', head: true })
-      .or('memory_type.eq.aba_command_executed,source.ilike.%air_trace%')
-      .gte('created_at', since7d);
-
-    // Estimate costs
-    const estimates = {
-      anthropic: {
-        daily_calls: airCalls24h || 0,
-        weekly_calls: airCalls7d || 0,
-        est_daily_cost: `$${((airCalls24h || 0) * 0.015).toFixed(2)}`,
-        est_weekly_cost: `$${((airCalls7d || 0) * 0.015).toFixed(2)}`,
-        note: 'Estimate: ~$0.015/call avg (Sonnet for chat, Gemini free for background)',
-        model_split: {
-          primary: 'Claude Sonnet 4.6 (direct chat + tool use)',
-          background: 'Gemini Flash (FREE - heartbeat, proactive, ERICA)',
-          voice: 'Gemini Flash via ElevenLabs (included in EL plan)'
+        if (new Date(row.created_at) >= new Date(hourAgo)) {
+          lastHourTotal += cost;
+          lastHourCalls++;
         }
-      },
-      elevenlabs: {
-        vara_calls_24h: varaCalls24h || 0,
-        note: 'Billed by ElevenLabs plan, not per-call'
-      },
-      nylas: {
-        emails_24h: emailsSent24h || 0,
-        note: 'Sandbox key (free tier)'
-      },
-      supabase: {
-        writes_24h: brainWrites24h || 0,
-        note: 'Free tier up to 500MB'
-      },
-      cron: {
-        runs_24h: cronRuns24h || 0,
-        note: 'Uses Gemini Flash (free) per 911 cost fix'
-      }
-    };
 
-    return NextResponse.json(estimates);
-  } catch (err) { return NextResponse.json({ error: err.message }, { status: 500 }); }
+        if (recentCalls.length < 20) {
+          recentCalls.push({
+            time: row.created_at,
+            model,
+            channel: ch,
+            type: ct,
+            cost: Math.round(cost * 10000) / 10000,
+            input: e.input_tokens || 0,
+            output: e.output_tokens || 0,
+            cache_hit: e.cache_hit_rate || 0
+          });
+        }
+      } catch (pe) {}
+    }
+
+    let weekTotal = 0, weekCalls = 0, weekByDay = {};
+    for (const row of (weekData || [])) {
+      try {
+        const e = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
+        const cost = e.cost_usd || 0;
+        weekTotal += cost;
+        weekCalls++;
+        const day = (e.timestamp || '').split('T')[0] || 'unknown';
+        weekByDay[day] = (weekByDay[day] || 0) + cost;
+      } catch (pe) {}
+    }
+
+    const cacheHitRate = (todayCacheRead + todayCacheCreate) > 0
+      ? Math.round(todayCacheRead / (todayCacheRead + todayCacheCreate) * 100) : 0;
+
+    const sortObj = (obj) => Object.entries(obj).sort((a,b) => b[1] - a[1]).map(([k,v]) => ({ name: k, cost: Math.round(v * 10000) / 10000 }));
+    const hourOfDay = now.getUTCHours() || 1;
+
+    return NextResponse.json({
+      realtime: true,
+      generated_at: now.toISOString(),
+      today: {
+        total_cost: Math.round(todayTotal * 100) / 100,
+        total_calls: todayCalls,
+        input_tokens: todayInput,
+        output_tokens: todayOutput,
+        cache_read: todayCacheRead,
+        cache_create: todayCacheCreate,
+        cache_hit_rate: cacheHitRate,
+        projected_daily: Math.round(todayTotal / hourOfDay * 24 * 100) / 100,
+        by_model: sortObj(todayByModel),
+        by_channel: sortObj(todayByChannel),
+        by_type: sortObj(todayByType)
+      },
+      last_hour: {
+        cost: Math.round(lastHourTotal * 100) / 100,
+        calls: lastHourCalls
+      },
+      week: {
+        total_cost: Math.round(weekTotal * 100) / 100,
+        total_calls: weekCalls,
+        avg_daily: Math.round(weekTotal / 7 * 100) / 100,
+        by_day: Object.entries(weekByDay).sort().map(([d,c]) => ({ date: d, cost: Math.round(c * 100) / 100 }))
+      },
+      recent_calls: recentCalls
+    });
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
