@@ -9,6 +9,7 @@ const NAV = [
     { href: '/', label: 'Dashboard', icon: '◈' },
     { href: '/events', label: 'Event Feed', icon: '◉' },
     { href: '/cost', label: 'Cost Tracking', icon: '◇' },
+    { href: '/activity', label: 'Live Activity', icon: '◐' },
   ]},
   { group: 'Agents', items: [
     { href: '/agents', label: 'Agent Roster', icon: '◎' },
@@ -17,6 +18,15 @@ const NAV = [
   { group: 'Intelligence', items: [
     { href: '/brain', label: 'Brain Search', icon: '◆' },
     { href: '/email', label: 'Email Trace', icon: '◫' },
+    { href: '/training', label: 'Training Notes', icon: '◑' },
+  ]},
+  { group: 'Transcripts', items: [
+    { href: '/omi', label: 'OMI Raw', icon: '◌' },
+    { href: '/taste', label: 'TASTE Batches', icon: '◍' },
+    { href: '/proactive', label: 'Proactive Events', icon: '◒' },
+  ]},
+  { group: 'Workforce', items: [
+    { href: '/awa', label: 'AWA Jobs', icon: '◓' },
   ]},
   { group: 'Infrastructure', items: [
     { href: '/keys', label: 'Key Management', icon: '⚿' },
