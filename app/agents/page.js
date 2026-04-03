@@ -1,96 +1,133 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, PageTitle, Loading, Empty, Btn, Tag, Modal, Pill, friendlyDate } from '../../components/UI';
+import { Card, Stat, PageTitle, Loading, Btn, Tag, Pill, Modal, Empty, friendlyDate, timeAgo } from '../../components/UI';
 
 export default function AgentsPage() {
-  const [tableAgents, setTableAgents] = useState([]);
-  const [memoryAgents, setMemoryAgents] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null);
-  const [editData, setEditData] = useState({});
-  const [editTarget, setEditTarget] = useState('table');
-  const [tab, setTab] = useState('table');
   const [search, setSearch] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [auditFilter, setAuditFilter] = useState('');
+  const [selected, setSelected] = useState(null);
 
-  async function load() {
-    setLoading(true);
-    const d = await fetch('/api/agents').then(r=>r.json());
-    setTableAgents(d.table_agents||[]); setMemoryAgents(d.memory_agents||[]); setLoading(false);
-  }
-  useEffect(()=>{load();},[]);
+  useEffect(() => {
+    fetch('/api/agents').then(r => r.json()).then(d => {
+      setAgents(d.table_agents || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
-  function openEditTable(agent) { setEditData({...agent}); setEditing(agent); setEditTarget('table'); }
-  function openEditMemory(agent) { setEditData({id:agent.id,content:agent.content||''}); setEditing(agent); setEditTarget('memory'); }
-  async function saveAgent() {
-    const {id,recent_actions,...updates}=editData;
-    await fetch('/api/agents',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,target:editTarget,...updates})});
-    setEditing(null); load();
-  }
+  if (loading) return <Loading text="Loading agent roster..." />;
 
-  const filteredTable = tableAgents.filter(a => !search || (a.agent_id+' '+a.full_name+' '+(a.department||'')).toLowerCase().includes(search.toLowerCase()));
-  const filteredMemory = memoryAgents.filter(a => !search || (a.source+' '+(a.content||'')).toLowerCase().includes(search.toLowerCase()));
+  const depts = [...new Set(agents.map(a => a.department).filter(Boolean))].sort();
+  const auditStatuses = [...new Set(agents.map(a => a.audit_status).filter(Boolean))].sort();
 
-  if(loading) return <Loading/>;
+  let filtered = agents;
+  if (search) filtered = filtered.filter(a =>
+    (a.agent_name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (a.agent_id || '').toLowerCase().includes(search.toLowerCase())
+  );
+  if (deptFilter) filtered = filtered.filter(a => a.department === deptFilter);
+  if (auditFilter) filtered = filtered.filter(a => a.audit_status === auditFilter);
 
-  return (<div>
-    <PageTitle right={<span className="text-dim text-xs">{tableAgents.length} table + {memoryAgents.length} brain</span>}>Agent Job Descriptions</PageTitle>
-    <div className="flex gap-2 mb-4">
-      <input className="flex-1" placeholder="Search agents..." value={search} onChange={e=>setSearch(e.target.value)} />
-      <Btn variant={tab==='table'?'primary':'default'} size="md" onClick={()=>setTab('table')}>Registry ({tableAgents.length})</Btn>
-      <Btn variant={tab==='memory'?'primary':'default'} size="md" onClick={()=>setTab('memory')}>Brain JDs ({memoryAgents.length})</Btn>
-      <Btn onClick={load}>Refresh</Btn>
-    </div>
+  const audited = agents.filter(a => a.audit_status === 'audited').length;
+  const needsAudit = agents.filter(a => a.audit_status === 'needs_real_audit' || !a.audit_status).length;
 
-    <div className="glass-card p-2 mb-3 text-xs text-green-400/80 px-3 py-2">AIR now loads agent JDs from <strong>both</strong> the aba_agent_jds table AND the 320 detailed brain JDs. Brain detail gets merged into the Fat Context Window.</div>
+  return (
+    <div className="fade-in">
+      <PageTitle sub={`${agents.length} agents loaded — this is by design`}>Agent Roster</PageTitle>
 
-    {tab==='table'&&(<Card title="aba_agent_jds (enriched with brain JDs)">
-      <table><thead><tr><th>Agent</th><th>Full Name</th><th>Dept</th><th>Tier</th><th>Last 5 Actions</th><th></th></tr></thead>
-      <tbody>{filteredTable.map(a=>(
-        <tr key={a.id} data-aba-ctx={JSON.stringify({type:'agent',label:a.agent_id,data:{agent_id:a.agent_id,full_name:a.full_name,department:a.department}})}>
-          <td className="font-semibold text-white">{a.agent_id}</td>
-          <td className="max-w-[180px]">{a.full_name}</td>
-          <td><Pill>{a.department||'-'}</Pill></td>
-          <td>{a.tier||'-'}</td>
-          <td className="max-w-[300px]">
-            {(a.recent_actions||[]).length > 0 ? (
-              <div className="space-y-0.5">{a.recent_actions.map(act=>(
-                <div key={act.id} className="text-[10px] text-dim truncate" title={act.content}>
-                  <span className="text-white/40">{friendlyDate(act.created_at).split(',')[0]}</span> {(act.content||'').replace(/^.*?:\s*/,'').slice(0,80)}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Stat value={agents.length} label="Total Agents" color="text-cyan-400" />
+        <Stat value={audited} label="Properly Audited" color="text-green-400" />
+        <Stat value={needsAudit} label="Needs Real Audit" color="text-yellow-400" />
+        <Stat value={depts.length} label="Departments" />
+      </div>
+
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search agents..."
+          className="w-64 text-xs" />
+        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
+          className="w-auto bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1.5 text-xs text-gray-300">
+          <option value="">All Departments</option>
+          {depts.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={auditFilter} onChange={e => setAuditFilter(e.target.value)}
+          className="w-auto bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1.5 text-xs text-gray-300">
+          <option value="">All Audit Status</option>
+          {auditStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      <Card title={`Agents (${filtered.length})`}>
+        {filtered.length === 0 ? <Empty text="No agents match filters" /> : (
+          <div className="space-y-0">
+            {filtered.map(agent => (
+              <div key={agent.id || agent.agent_id} className="border-b border-white/[0.03] last:border-0 py-2.5 px-1 cursor-pointer hover:bg-white/[0.02] transition-all"
+                onClick={() => setSelected(agent)}>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-white font-medium">{agent.agent_name || agent.agent_id}</span>
+                      <Tag variant={agent.audit_status === 'audited' ? 'ok' : agent.audit_status === 'needs_real_audit' ? 'warn' : 'dim'}>
+                        {agent.audit_status || 'unknown'}
+                      </Tag>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {agent.department && <Pill>{agent.department}</Pill>}
+                      {agent.tier && <Pill>Tier {agent.tier}</Pill>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-dim">Last 5 actions</div>
+                    <div className="text-xs text-gray-400">
+                      {(agent.recent_actions || []).length > 0
+                        ? timeAgo((agent.recent_actions[0]?.created_at))
+                        : 'none'}
+                    </div>
+                  </div>
+                  <span className="text-dim text-xs">▸</span>
                 </div>
-              ))}</div>
-            ) : <span className="text-dim text-[10px]">No recent activity</span>}
-          </td>
-          <td><Btn onClick={()=>openEditTable(a)}>Edit</Btn></td>
-        </tr>
-      ))}</tbody></table>
-    </Card>)}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
-    {tab==='memory'&&(<Card title="aba_memory (detailed brain JDs)">
-      <table><thead><tr><th>Source</th><th>Content Preview</th><th></th></tr></thead>
-      <tbody>{filteredMemory.map(a=>(
-        <tr key={a.id} data-aba-ctx={JSON.stringify({type:'brain_agent_jd',label:a.source})}>
-          <td className="mono max-w-[200px] truncate">{a.source}</td>
-          <td className="max-w-[400px]">{(a.content||'').slice(0,200)}</td>
-          <td><Btn onClick={()=>openEditMemory(a)}>Edit</Btn></td>
-        </tr>
-      ))}</tbody></table>
-    </Card>)}
-
-    <Modal open={!!editing} onClose={()=>setEditing(null)} title={`Edit: ${editing?.agent_id||editing?.source||''}`}>
-      {editing&&editTarget==='table'&&(<div className="space-y-3">
-        {Object.entries(editData).filter(([k])=>!['id','created_at','updated_at','recent_actions','_has_brain_jd'].includes(k)).map(([key,val])=>{
-          const sv=typeof val==='object'&&val!==null?JSON.stringify(val,null,2):String(val||'');
-          return (<div key={key}><label className="text-[10px] text-dim uppercase">{key}</label>
-            {sv.length>80?<textarea rows={4} value={typeof editData[key]==='object'?JSON.stringify(editData[key],null,2):(editData[key]||'')} onChange={e=>setEditData({...editData,[key]:e.target.value})}/>
-            :<input value={editData[key]||''} onChange={e=>setEditData({...editData,[key]:e.target.value})}/>}</div>);
-        })}
-        <Btn variant="primary" size="md" onClick={saveAgent}>Save to Registry</Btn>
-      </div>)}
-      {editing&&editTarget==='memory'&&(<div className="space-y-3">
-        <label className="text-[10px] text-dim uppercase">Full JD Content</label>
-        <textarea rows={15} value={editData.content||''} onChange={e=>setEditData({...editData,content:e.target.value})}/>
-        <Btn variant="primary" size="md" onClick={saveAgent}>Save to Brain</Btn>
-      </div>)}
-    </Modal>
-  </div>);
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.agent_name || 'Agent'} wide>
+        {selected && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div><span className="text-[10px] text-dim block">ID</span><span className="text-xs text-white">{selected.agent_id}</span></div>
+              <div><span className="text-[10px] text-dim block">Department</span><span className="text-xs text-white">{selected.department || '—'}</span></div>
+              <div><span className="text-[10px] text-dim block">Tier</span><span className="text-xs text-white">{selected.tier || '—'}</span></div>
+              <div><span className="text-[10px] text-dim block">Audit</span><Tag variant={selected.audit_status === 'audited' ? 'ok' : 'warn'}>{selected.audit_status || '—'}</Tag></div>
+            </div>
+            {selected.full_description && (
+              <div>
+                <span className="text-[10px] text-dim block mb-1">Job Description</span>
+                <pre className="text-xs text-gray-300 whitespace-pre-wrap bg-white/[0.02] rounded-lg p-3 max-h-[300px] overflow-y-auto">{selected.full_description}</pre>
+              </div>
+            )}
+            {(selected.recent_actions || []).length > 0 && (
+              <div>
+                <span className="text-[10px] text-dim block mb-2">Recent Actions</span>
+                <div className="space-y-1.5">
+                  {selected.recent_actions.map((a, i) => (
+                    <div key={i} className="glass-subtle p-2.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">{a.memory_type}</span>
+                        <span className="text-dim">{friendlyDate(a.created_at)}</span>
+                      </div>
+                      {a.source && <div className="text-dim text-[10px] mt-0.5">{a.source}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
 }

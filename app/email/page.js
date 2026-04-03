@@ -1,114 +1,116 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, PageTitle, Loading, Btn, Tag, Pill, friendlyTime, friendlyDate, Modal } from '../../components/UI';
+import { Card, Stat, PageTitle, Loading, Btn, Tag, Modal, Empty, friendlyDate } from '../../components/UI';
 
 export default function EmailPage() {
   const [emails, setEmails] = useState([]);
-  const [totalHuman, setTotalHuman] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [grant, setGrant] = useState('all');
-  const [hours, setHours] = useState('24');
-  const [mode, setMode] = useState('aba_only');
-  const [viewing, setViewing] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [tracing, setTracing] = useState(null);
   const [trace, setTrace] = useState(null);
-  const [tracing, setTracing] = useState(false);
-  const [search, setSearch] = useState('');
 
-  async function load() {
-    setLoading(true);
-    const d = await fetch(`/api/email?grant=${grant}&hours=${hours}&mode=${mode}`).then(r=>r.json());
-    setEmails(d.emails||[]);
-    setTotalHuman(d.totalIncludingHuman || 0);
-    setLoading(false);
-  }
-  useEffect(()=>{load();},[grant,hours,mode]);
+  useEffect(() => {
+    fetch('/api/email').then(r => r.json()).then(d => {
+      setEmails(d.emails || d.data || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
-  async function traceEmail(email) {
-    setViewing(email); setTracing(true); setTrace(null);
-    const d = await fetch(`/api/email/trace?subject=${encodeURIComponent(email.subject)}&id=${email.id}&thread=${email.thread_id||''}&to=${encodeURIComponent((email.to||[])[0]||'')}&date=${encodeURIComponent(email.date||'')}`).then(r=>r.json());
-    setTrace(d); setTracing(false);
-  }
+  const traceEmail = async (email) => {
+    setTracing(email);
+    try {
+      const content = typeof email.content === 'string' ? JSON.parse(email.content) : email.content;
+      const q = content?.subject || content?.to || content?.message_id || '';
+      const res = await fetch('/api/email/trace?q=' + encodeURIComponent(q)).then(r => r.json());
+      setTrace(res);
+    } catch { setTrace({ error: 'Could not trace' }); }
+    setSelected(email);
+  };
 
-  const grantColor = g => ({claudette:'info',brandon_personal:'orange',bdif:'ok',brandon_gmg:'warn',bj:'dim',brandon_alt:'dim'}[g]||'dim');
-  const filtered = emails.filter(e => !search || JSON.stringify(e).toLowerCase().includes(search.toLowerCase()));
+  if (loading) return <Loading text="Loading email trace..." />;
 
-  return (<div>
-    <PageTitle right={<span className="text-dim text-xs">{filtered.length.toLocaleString()} ABA-initiated{mode==='all'?` (${totalHuman} total incl. human)`:''}</span>}>Email Audit</PageTitle>
-    <div className="flex gap-2 mb-4 flex-wrap">
-      <input className="flex-1 min-w-[200px]" placeholder="Search emails..." value={search} onChange={e=>setSearch(e.target.value)} />
-      <Btn variant={mode==='aba_only'?'primary':'default'} size="md" onClick={()=>setMode('aba_only')}>ABA-Initiated Only</Btn>
-      <Btn variant={mode==='all'?'primary':'default'} size="md" onClick={()=>setMode('all')}>All Sent</Btn>
-      <select className="w-40" value={grant} onChange={e=>setGrant(e.target.value)}>
-        <option value="all">All Grants (6)</option>
-        <option value="claudette">ABA / Claudette</option>
-        <option value="brandon_personal">Brandon Personal</option>
-        <option value="brandon_gmg">Brandon GMG</option>
-        <option value="bdif">BDIF</option>
-        <option value="bj">BJ Pierce</option>
-        <option value="brandon_alt">Brandon Alt</option>
-      </select>
-      <select className="w-24" value={hours} onChange={e=>setHours(e.target.value)}>
-        <option value="6">6h</option><option value="24">24h</option><option value="72">3d</option><option value="168">7d</option>
-      </select>
-      <Btn onClick={load}>Refresh</Btn>
-    </div>
-    <Card>{loading?<Loading/>:(
-      <table><thead><tr><th>Time</th><th>Grant</th><th>From</th><th>To</th><th>Subject</th><th></th></tr></thead>
-      <tbody>{filtered.map((e,i)=>(
-        <tr key={i} data-aba-ctx={JSON.stringify({type:'email',label:e.subject,data:{from:e.from,to:e.to,subject:e.subject,date:e.date,grant:e.grant}})}>
-          <td className="mono whitespace-nowrap">{friendlyTime(e.date)}</td>
-          <td><Tag variant={grantColor(e.grant)}>{e.grantLabel||e.grant}</Tag></td>
-          <td className="max-w-[130px] truncate">{e.from_name||e.from}</td>
-          <td className="max-w-[160px] truncate">{(e.to||[]).join(', ')}</td>
-          <td className="font-medium text-white max-w-[250px] truncate">
-            {!e.abaInitiated && <span className="text-dim text-[10px] mr-1">[human]</span>}
-            {e.subject}
-          </td>
-          <td><Btn onClick={()=>traceEmail(e)}>Trace</Btn></td>
-        </tr>
-      ))}</tbody></table>
-    )}</Card>
+  const sent = emails.filter(e => {
+    const c = typeof e.content === 'string' ? JSON.parse(e.content) : e.content;
+    return c?.direction === 'sent' || e.memory_type === 'email_sent' || e.memory_type === 'email_dedup';
+  });
+  const received = emails.filter(e => {
+    const c = typeof e.content === 'string' ? JSON.parse(e.content) : e.content;
+    return c?.direction === 'received' || e.memory_type === 'email_task_processed';
+  });
 
-    <Modal open={!!viewing} onClose={()=>{setViewing(null);setTrace(null);}} title={viewing?.subject||'Email Trace'}>
-      {viewing&&(<div className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div><span className="text-dim">From:</span> {viewing.from_name} ({viewing.from})</div>
-          <div><span className="text-dim">To:</span> {(viewing.to||[]).join(', ')}</div>
-          <div><span className="text-dim">Grant:</span> <Tag variant={grantColor(viewing.grant)}>{viewing.grantLabel||viewing.grant}</Tag></div>
-          <div><span className="text-dim">Time:</span> {friendlyDate(viewing.date)}</div>
-          <div><span className="text-dim">ABA-Initiated:</span> {viewing.abaInitiated ? <Tag variant="info">Yes</Tag> : <Tag variant="dim">No (human sent)</Tag>}</div>
-        </div>
-        <div className="border-t border-white/[0.04] pt-3">
-          <h3 className="text-xs font-bold text-white mb-2">What Triggered This Email</h3>
-          {!viewing.abaInitiated ? (
-            <div className="glass-card p-3 text-sm text-dim">This email was sent by a human, not by ABA. No automated trigger.</div>
-          ) : tracing ? <Loading text="Tracing code path..." /> : trace ? (
-            <div className="space-y-3">
-              <div className="space-y-3">
-                <pre className="glass-card p-3 text-xs whitespace-pre-wrap text-gray-300">{trace.explanation}</pre>
-                {trace.codePaths?.map((cp, i) => (
-                  <div key={i} className="glass-card p-3 space-y-2">
-                    <div className="text-xs font-semibold text-accent">Code Path: {cp.id}</div>
-                    <div className="text-xs text-white">{cp.trigger}</div>
-                    <div className="text-[10px] text-dim mt-1">{(cp.chain||[]).map((s,j) => <div key={j}>{j+1}. {s}</div>)}</div>
-                    <div className="mt-2">{(cp.files||[]).map((f,j) => <div key={j} className="text-[10px] mono text-yellow-400">{f.file} (line {f.line||'?'}) → {f.fn}</div>)}</div>
-                    <div className="text-xs text-red-400 mt-1">Stop: {cp.howToStop}</div>
+  return (
+    <div className="fade-in">
+      <PageTitle sub="Trace every email ABA sent or processed" right={<Btn onClick={() => window.location.reload()}>Refresh</Btn>}>Email Trace</PageTitle>
+
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <Stat value={emails.length} label="Total Email Events" />
+        <Stat value={sent.length} label="Sent" color="text-green-400" />
+        <Stat value={received.length} label="Processed" color="text-cyan-400" />
+      </div>
+
+      <Card title={`Email Events (${emails.length})`}>
+        {emails.length === 0 ? <Empty text="No email events found" /> : (
+          <div className="space-y-0">
+            {emails.slice(0, 100).map((email, i) => {
+              let content = {};
+              try { content = typeof email.content === 'string' ? JSON.parse(email.content) : email.content; } catch {}
+              return (
+                <div key={i} className="border-b border-white/[0.03] last:border-0 py-2.5 px-1 cursor-pointer hover:bg-white/[0.02] transition-all"
+                  onClick={() => traceEmail(email)}>
+                  <div className="flex items-center gap-2">
+                    <Tag variant={email.memory_type === 'email_sent' || email.memory_type === 'email_dedup' ? 'ok' : 'cyan'}>
+                      {email.memory_type === 'email_sent' || email.memory_type === 'email_dedup' ? 'SENT' : 'IN'}
+                    </Tag>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-white truncate">{content?.subject || content?.to || 'Email event'}</div>
+                      <div className="text-[10px] text-dim truncate">
+                        {content?.to && <span>To: {content.to}</span>}
+                        {content?.from && <span> From: {content.from}</span>}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-dim whitespace-nowrap">{friendlyDate(email.created_at)}</span>
+                    <span className="text-purple text-[10px]">Trace ▸</span>
                   </div>
-                ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Modal open={!!selected} onClose={() => { setSelected(null); setTrace(null); }} title="Email Trace" wide>
+        {selected && (() => {
+          let content = {};
+          try { content = typeof selected.content === 'string' ? JSON.parse(selected.content) : selected.content; } catch {}
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                <div><span className="text-[10px] text-dim block">Type</span><Tag>{selected.memory_type}</Tag></div>
+                <div><span className="text-[10px] text-dim block">Source</span><span className="text-white break-all">{selected.source}</span></div>
+                <div><span className="text-[10px] text-dim block">When</span><span className="text-white">{friendlyDate(selected.created_at)}</span></div>
               </div>
-              {trace.trace?.send_logs?.length>0&&<div><span className="text-dim text-[10px]">Send Logs ({trace.trace.send_logs.length})</span>
-                {trace.trace.send_logs.map(l=><div key={l.id} className="text-xs mt-1 text-dim">{friendlyDate(l.created_at)}: {(l.content||'').slice(0,150)}</div>)}</div>}
-              {trace.trace?.task_logs?.length>0&&<div><span className="text-dim text-[10px]">Task Logs ({trace.trace.task_logs.length})</span>
-                {trace.trace.task_logs.map(l=><div key={l.id} className="text-xs mt-1 text-dim">{friendlyDate(l.created_at)}: {(l.content||'').slice(0,150)}</div>)}</div>}
-              {trace.trace?.proactive?.length>0&&<div><span className="text-dim text-[10px]">Proactive Trigger ({trace.trace.proactive.length})</span>
-                {trace.trace.proactive.map(l=><div key={l.id} className="text-xs mt-1 text-dim">{friendlyDate(l.created_at)}: {(l.content||'').slice(0,150)}</div>)}</div>}
-              {trace.trace?.commands?.length>0&&<div><span className="text-dim text-[10px]">Voice Commands ({trace.trace.commands.length})</span>
-                {trace.trace.commands.map(l=><div key={l.id} className="text-xs mt-1 text-dim">{friendlyDate(l.created_at)}: {(l.content||'').slice(0,150)}</div>)}</div>}
-              <div className="text-dim text-[10px]">{trace.total} trace records found</div>
+              {content?.to && <div className="text-xs"><span className="text-dim">To: </span><span className="text-white">{content.to}</span></div>}
+              {content?.from && <div className="text-xs"><span className="text-dim">From: </span><span className="text-white">{content.from}</span></div>}
+              {content?.subject && <div className="text-xs"><span className="text-dim">Subject: </span><span className="text-white">{content.subject}</span></div>}
+              {content?.body && (
+                <div>
+                  <span className="text-[10px] text-dim block mb-1">Body</span>
+                  <div className="text-xs text-gray-300 bg-white/[0.02] rounded-lg p-3 max-h-[200px] overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: content.body }} />
+                </div>
+              )}
+              {trace && !trace.error && (
+                <div>
+                  <span className="text-[10px] text-dim block mb-1">Trace Path</span>
+                  <pre className="text-xs text-gray-300 bg-white/[0.02] rounded-lg p-3 max-h-[200px] overflow-y-auto mono">
+                    {JSON.stringify(trace, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
-          ) : null}
-        </div>
-      </div>)}
-    </Modal>
-  </div>);
+          );
+        })()}
+      </Modal>
+    </div>
+  );
 }

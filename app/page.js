@@ -1,62 +1,104 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, Stat, Pill, PageTitle, Loading, friendlyTime, Btn, describeType, isSignificantActivity } from '../components/UI';
+import { Card, Stat, PageTitle, Loading, Tag, friendlyDate, timeAgo } from '../components/UI';
 
 export default function Dashboard() {
-  const [dash, setDash] = useState(null);
-  const [activity, setActivity] = useState([]);
+  const [data, setData] = useState(null);
+  const [cost, setCost] = useState(null);
+  const [events, setEvents] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
-    setLoading(true);
-    const [d, a] = await Promise.all([
-      fetch('/api/dashboard').then(r => r.json()),
-      fetch('/api/activity?minutes=30&limit=100').then(r => r.json()),
-    ]);
-    setDash(d);
-    setActivity((a.activity || []).filter(isSignificantActivity));
-    setLoading(false);
-  }
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/dashboard').then(r => r.json()).catch(() => null),
+      fetch('/api/cost').then(r => r.json()).catch(() => null),
+      fetch('/api/events?limit=10').then(r => r.json()).catch(() => null),
+    ]).then(([d, c, e]) => {
+      setData(d);
+      setCost(c);
+      setEvents(e);
+      setLoading(false);
+    });
+  }, []);
 
-  useEffect(() => { load(); const iv = setInterval(load, 60000); return () => clearInterval(iv); }, []);
+  if (loading) return <Loading text="Connecting to ABA brain..." />;
 
-  if (loading && !dash) return <Loading />;
-  const b = dash?.brain || {}, e = dash?.errors || {}, em = dash?.emails || {};
+  const d = data || {};
+  const costToday = cost?.today?.total_cost_usd ?? '—';
+  const costCalls = cost?.today?.total_calls ?? 0;
+  const recentEvents = (events?.events || []).filter(e =>
+    !['omi_received', 'heartbeat_cycle_complete', 'heartbeat_started'].includes(e.action)
+  ).slice(0, 8);
+
+  const killSwitchCount = '—'; // loaded dynamically if needed
 
   return (
-    <div>
-      <PageTitle right={<span className="text-[10px] text-dim">{dash?.ts ? 'Updated ' + friendlyTime(dash.ts) : ''}</span>}>Dashboard</PageTitle>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 mb-5">
-        <Stat value={b.total || 0} label="Brain Entries" tooltip="Total entries in ABA brain (Supabase)" href="/brain" />
-        <Stat value={b.last24h || 0} label="Brain 24h" tooltip="New brain entries in last 24 hours" href="/brain" />
-        <Stat value={b.lastHour || 0} label="Brain 1h" tooltip="New brain entries in last hour" href="/activity" />
-        <Stat value={e.last24h || 0} label="Errors 24h" color={e.last24h > 0 ? 'text-red-400' : 'text-green-400'} tooltip="Errors and failures in last 24 hours" href="/errors" />
-        <Stat value={em.last24h || 0} label="Emails Sent 24h" tooltip="Emails sent across all 6 Nylas grants" href="/email" />
-        <Stat value={dash?.agents?.total || 0} label="Agents" tooltip="Registered agents in aba_agent_jds" href="/agents" />
-        <Stat value={dash?.taste?.batchesLast24h || 0} label="TASTE 24h" tooltip="TASTE batch runs (compiles OMI into sessions)" href="/taste" />
-        <Stat value={dash?.omi?.transcriptsLast24h || 0} label="OMI 24h" tooltip="Raw OMI pendant transcript fragments" href="/omi" />
-        <Stat value={dash?.training?.totalNotes || 0} label="Training Notes" tooltip="CCWA training notes (Claude teaching ABAbase)" href="/training" />
-        <Stat value={<><span className={`inline-block w-2 h-2 rounded-full mr-2 ${dash?.ababase?.status === 'up' ? 'bg-green-400' : 'bg-red-400'}`}></span>{dash?.ababase?.status || '?'}</>}
-          label="ABAbase" tooltip="abacia-services.onrender.com health" href="/continuity" />
+    <div className="fade-in">
+      <PageTitle sub="Real-time ABA infrastructure overview">Dashboard</PageTitle>
+
+      {/* Top stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <Stat value={d.brain?.total} label="Brain Entries" href="/brain" sub={`${d.brain?.last24h ?? 0} today`} />
+        <Stat value={d.brain?.last24h} label="24h New Entries" href="/brain" color="text-purple" />
+        <Stat value={d.errors?.last24h} label="Errors (24h)" href="/errors" color={d.errors?.last24h > 0 ? 'text-red-400' : 'text-green-400'} />
+        <Stat value={costToday !== '—' ? `$${costToday}` : '—'} label="API Cost Today" href="/cost" color="text-yellow-400" sub={`${costCalls} calls`} />
+        <Stat value={d.agents?.total} label="Agents Loaded" href="/agents" color="text-cyan-400" />
+        <Stat value={d.ababase?.status === 'up' ? 'Online' : 'Offline'} label="ABAbase" color={d.ababase?.status === 'up' ? 'text-green-400' : 'text-red-400'}
+          sub={d.ababase?.status === 'up' ? 'All systems go' : 'Check services'} href="/services" />
       </div>
 
-      <Card title="Recent Significant Activity (30 min)" actions={<Btn onClick={load}>Refresh</Btn>}>
-        {activity.length === 0 ? <Loading text="No significant activity in last 30 minutes" /> : (
-          <table>
-            <thead><tr><th>Time</th><th>What Happened</th><th>Source</th><th>Details</th></tr></thead>
-            <tbody>
-              {activity.slice(0, 30).map(a => (
-                <tr key={a.id} data-aba-ctx={JSON.stringify({type:a.memory_type,label:a.source,data:{id:a.id,content:(a.content||'').slice(0,200)}})}>
-                  <td className="mono whitespace-nowrap">{friendlyTime(a.created_at)}</td>
-                  <td title={a.memory_type}><Pill>{describeType(a.memory_type)}</Pill></td>
-                  <td className="mono max-w-[160px] truncate" title={a.source}>{a.source}</td>
-                  <td className="max-w-[350px]">{(a.content || '').slice(0, 150)}</td>
-                </tr>
+      {/* Secondary stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <Stat value={d.emails?.last24h} label="Emails (24h)" href="/email" />
+        <Stat value={d.omi?.transcriptsLast24h} label="OMI Transcripts" color="text-purple-light" />
+        <Stat value={d.taste?.batchesLast24h} label="TASTE Batches" color="text-orange-400" />
+        <Stat value={d.training?.totalNotes} label="Training Notes" />
+      </div>
+
+      {/* Cost breakdown + Recent activity */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Cost breakdown */}
+        <Card title="Cost Breakdown Today" actions={<a href="/cost" className="text-[10px] text-purple hover:underline">View All</a>}>
+          {cost?.today?.by_model?.length > 0 ? (
+            <div className="space-y-2">
+              {cost.today.by_model.map(m => (
+                <div key={m.name} className="flex justify-between items-center text-xs">
+                  <span className="text-gray-300">{m.name}</span>
+                  <span className="text-yellow-400 font-mono">${m.cost.toFixed(4)}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
+              <div className="border-t border-white/[0.04] pt-2 mt-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-dim">Cache hit rate</span>
+                  <span className="text-green-400">{cost?.today?.cache_hit_rate || '0%'}</span>
+                </div>
+                <div className="flex justify-between text-xs mt-1">
+                  <span className="text-dim">Projected daily</span>
+                  <span className="text-yellow-400">${cost?.today?.projected_daily || '0'}</span>
+                </div>
+              </div>
+            </div>
+          ) : <p className="text-dim text-xs">No cost data yet today.</p>}
+        </Card>
+
+        {/* Recent activity */}
+        <Card title="Recent Activity" actions={<a href="/events" className="text-[10px] text-purple hover:underline">Event Feed</a>}>
+          {recentEvents.length > 0 ? (
+            <div className="space-y-1.5">
+              {recentEvents.map((ev, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs py-1">
+                  <Tag variant={ev.result === 'success' ? 'ok' : ev.result === 'error' ? 'err' : 'dim'}>{ev.result}</Tag>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-gray-300">{ev.action?.replace(/_/g, ' ')}</span>
+                    {ev.message_preview && <span className="text-dim ml-1 truncate block text-[10px]">{ev.message_preview.slice(0, 60)}</span>}
+                  </div>
+                  <span className="text-dim text-[10px] whitespace-nowrap">{timeAgo(ev._created || ev.timestamp)}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-dim text-xs">No recent activity.</p>}
+        </Card>
+      </div>
     </div>
   );
 }

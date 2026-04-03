@@ -4,11 +4,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        bg: '#0a0a0f',
-        card: '#111118',
-        border: '#1e1e2e',
-        dim: '#666',
-        accent: '#6366f1',
+        purple: { DEFAULT: '#8B5CF6', deep: '#6D28D9', light: '#A78BFA' },
+        bg: '#0F172A',
+        card: '#1E293B',
+        border: '#334155',
+        dim: '#94A3B8',
+        accent: '#8B5CF6',
       }
     }
   },

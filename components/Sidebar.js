@@ -4,65 +4,67 @@ import { usePathname } from 'next/navigation';
 
 const NAV = [
   { group: 'Command', items: [
-    { href: '/', label: 'Dashboard' },
-    { href: '/approve', label: 'Approval Queue' },
-    { href: '/killswitch', label: 'Kill Switches' },
-    { href: '/activity', label: 'Live Activity' },
-    { href: '/events', label: 'Event Feed' },
+    { href: '/', label: 'Dashboard', icon: '◈' },
+    { href: '/events', label: 'Event Feed', icon: '◉' },
+    { href: '/cost', label: 'Cost Tracking', icon: '◇' },
   ]},
   { group: 'Agents', items: [
-    { href: '/agents', label: 'Agent JDs' },
+    { href: '/agents', label: 'Agent Roster', icon: '◎' },
+    { href: '/killswitch', label: 'Kill Switches', icon: '⊘' },
   ]},
-  { group: 'Brain', items: [
-    { href: '/brain', label: 'Memory Search' },
-    { href: '/training', label: 'CCWA Training' },
-  ]},
-  { group: 'Email', items: [
-    { href: '/email', label: 'Email Audit' },
-  ]},
-  { group: 'OMI / TASTE', items: [
-    { href: '/omi', label: 'OMI Transcripts' },
-    { href: '/taste', label: 'TASTE Batches' },
-    { href: '/proactive', label: 'Proactive Events' },
-  ]},
-  { group: 'AWA', items: [
-    { href: '/awa', label: 'Jobs & Apps' },
+  { group: 'Intelligence', items: [
+    { href: '/brain', label: 'Brain Search', icon: '◆' },
+    { href: '/email', label: 'Email Trace', icon: '◫' },
   ]},
   { group: 'Infrastructure', items: [
-    { href: '/render', label: 'Render (13)' },
-    { href: '/vercel', label: 'Vercel (50)' },
-    { href: '/env', label: 'Env Variables' },
-    { href: '/cost', label: 'Cost Dashboard' },
-    { href: '/continuity', label: 'Continuity' },
-    { href: '/errors', label: 'Error Log' },
-    { href: '/code', label: 'Code Explorer' },
+    { href: '/services', label: 'Services', icon: '◧' },
+    { href: '/errors', label: 'Error Log', icon: '◬' },
+  ]},
+  { group: 'ABA', items: [
+    { href: '/chat', label: 'ABA Chat', icon: '⬡' },
   ]},
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ mobile, onClose }) {
   const pathname = usePathname();
+
   return (
-    <aside className="w-56 bg-[rgba(17,17,26,0.8)] backdrop-blur-xl border-r border-white/[0.04] flex-shrink-0 overflow-y-auto h-screen sticky top-0">
-      <div className="px-4 py-4 border-b border-white/[0.04]">
-        <h1 className="text-sm font-bold text-white"><span className="text-accent">AOA</span> Portal</h1>
-        <p className="text-[10px] text-dim mt-0.5">Admin Operations for ABA</p>
-      </div>
-      {NAV.map(g => (
-        <div key={g.group} className="py-1">
-          <div className="px-4 py-1.5 text-[10px] uppercase tracking-wider text-dim mt-2">{g.group}</div>
-          {g.items.map(item => {
-            const active = pathname === item.href;
-            return (
-              <Link key={item.href} href={item.href}
-                className={`block px-4 py-1.5 text-xs border-l-[3px] transition-all ${
-                  active ? 'bg-white/[0.04] border-accent text-white' : 'border-transparent text-gray-400 hover:bg-white/[0.03] hover:text-white'
-                }`}>
-                {item.label}
-              </Link>
-            );
-          })}
+    <aside className={`${mobile ? 'fixed inset-0 z-50' : 'w-56 flex-shrink-0 h-screen sticky top-0 hidden md:block'}`}>
+      {mobile && <div className="absolute inset-0 bg-black/60" onClick={onClose} />}
+      <div className={`${mobile ? 'absolute left-0 top-0 w-64 h-full z-10' : 'w-full h-full'} bg-[rgba(15,23,42,0.85)] backdrop-blur-xl border-r border-white/[0.04] overflow-y-auto`}>
+        <div className="px-4 py-4 border-b border-white/[0.04] flex items-center gap-3">
+          <img src="https://i.imgur.com/0be7HCF.png" alt="" className="w-7 h-7 rounded-full" />
+          <div>
+            <h1 className="text-sm font-bold text-white"><span className="text-purple">AOA</span> Portal</h1>
+            <p className="text-[9px] text-dim mt-0.5">Anatomy of ABA</p>
+          </div>
+          {mobile && <button onClick={onClose} className="ml-auto text-dim hover:text-white text-lg">&times;</button>}
         </div>
-      ))}
+
+        {NAV.map(g => (
+          <div key={g.group} className="py-1">
+            <div className="px-4 py-1.5 text-[9px] uppercase tracking-widest text-dim/60 mt-2 font-semibold">{g.group}</div>
+            {g.items.map(item => {
+              const active = pathname === item.href;
+              return (
+                <Link key={item.href} href={item.href} onClick={mobile ? onClose : undefined}
+                  className={`flex items-center gap-2.5 px-4 py-2 text-[13px] border-l-[3px] transition-all ${
+                    active
+                      ? 'bg-purple/[0.08] border-purple text-white font-medium'
+                      : 'border-transparent text-gray-400 hover:bg-white/[0.03] hover:text-white'
+                  }`}>
+                  <span className={`text-xs ${active ? 'text-purple' : 'text-dim'}`}>{item.icon}</span>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+
+        <div className="px-4 py-4 mt-4 border-t border-white/[0.04] text-[9px] text-dim/40 text-center">
+          T10 Operator Access
+        </div>
+      </div>
     </aside>
   );
 }

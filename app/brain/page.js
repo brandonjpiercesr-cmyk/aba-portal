@@ -1,101 +1,128 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Card, PageTitle, Loading, Empty, Btn, Pill, Tag, Modal, friendlyDate, describeType } from '../../components/UI';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, Stat, PageTitle, Loading, Btn, Tag, Modal, Empty, friendlyDate, describeType } from '../../components/UI';
 
 export default function BrainPage() {
   const [results, setResults] = useState([]);
-  const [types, setTypes] = useState([]);
   const [total, setTotal] = useState(0);
+  const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [q, setQ] = useState('');
-  const [type, setType] = useState('');
-  const [limit, setLimit] = useState(50);
-  const [viewing, setViewing] = useState(null);
-  const [adding, setAdding] = useState(false);
-  const [newEntry, setNewEntry] = useState({ source: '', memory_type: '', content: '', importance: 5 });
+  const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [offset, setOffset] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const limit = 50;
 
-  useEffect(()=>{ fetch('/api/brain?action=types').then(r=>r.json()).then(d=>setTypes(d.types||[])); },[]);
+  useEffect(() => {
+    fetch('/api/brain?action=types').then(r => r.json()).then(d => setTypes(d.types || []));
+  }, []);
 
-  async function search() {
+  const search = useCallback(async (newOffset = 0) => {
     setLoading(true);
-    const params = new URLSearchParams({limit});
-    if(q) params.set('q',q);
-    if(type) params.set('type',type);
-    const d = await fetch(`/api/brain?${params}`).then(r=>r.json());
-    setResults(d.data||[]); setTotal(d.total||0); setLoading(false);
-  }
+    const params = new URLSearchParams({ limit: String(limit), offset: String(newOffset) });
+    if (query) params.set('q', query);
+    if (typeFilter) params.set('type', typeFilter);
+    const d = await fetch('/api/brain?' + params.toString()).then(r => r.json());
+    setResults(d.data || []);
+    setTotal(d.total || 0);
+    setOffset(newOffset);
+    setLoading(false);
+  }, [query, typeFilter]);
 
-  async function deleteEntry(id) { if(!confirm('Delete #'+id+'?')) return; await fetch(`/api/brain?id=${id}`,{method:'DELETE'}); search(); }
+  useEffect(() => { search(0); }, [typeFilter]);
 
-  async function addEntry() {
-    await fetch('/api/brain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newEntry, source: `aoa_manual_${Date.now()}`, tags: ['aoa_portal', 'T10_HAM_manual'] })
-    });
-    // Use POST for new entries
-    // Use the Supabase insert directly
-    await fetch('/api/brain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: null,
-        source: newEntry.source || `aoa_manual_${Date.now()}`,
-        memory_type: newEntry.memory_type,
-        content: newEntry.content,
-        importance: parseInt(newEntry.importance) || 5,
-        tags: ['aoa_portal', 'T10_HAM_manual']
-      })
-    });
-    setAdding(false);
-    setNewEntry({ source: '', memory_type: '', content: '', importance: 5 });
-    search();
-  }
+  const parseContent = (content) => {
+    if (!content) return '';
+    try {
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      return JSON.stringify(parsed, null, 2);
+    } catch { return String(content); }
+  };
 
-  return (<div>
-    <PageTitle right={<Btn variant="primary" size="md" onClick={()=>setAdding(true)}>+ Add Memory</Btn>}>Brain Memory Search</PageTitle>
-    <div className="flex gap-2 mb-4">
-      <input className="flex-1" placeholder="Search content or source..." value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} />
-      <select className="w-48" value={type} onChange={e=>setType(e.target.value)}>
-        <option value="">All Types</option>
-        {types.map(t=><option key={t} value={t}>{t}</option>)}
-      </select>
-      <input className="w-16" type="number" value={limit} onChange={e=>setLimit(e.target.value)} />
-      <Btn variant="primary" size="md" onClick={search}>Search</Btn>
-    </div>
+  const contentPreview = (content) => {
+    const str = typeof content === 'string' ? content : JSON.stringify(content);
+    return str?.slice(0, 120) || '';
+  };
 
-    <Card>{loading?<Loading/>:results.length===0?<Empty text="Enter a search term and press Search"/>:(
-      <><div className="text-dim text-xs mb-2">{total?.toLocaleString()} total results</div>
-      <table><thead><tr><th>Created</th><th>What</th><th>Source</th><th>Content</th><th>Imp</th><th></th></tr></thead>
-      <tbody>{results.map(m=>(
-        <tr key={m.id} data-aba-ctx={JSON.stringify({type:'brain_entry',label:m.source,data:{id:m.id,type:m.memory_type,source:m.source}})}>
-          <td className="mono whitespace-nowrap">{friendlyDate(m.created_at)}</td>
-          <td title={m.memory_type}><Pill>{describeType(m.memory_type)}</Pill></td>
-          <td className="mono max-w-[150px] truncate" title={m.source}>{m.source}</td>
-          <td className="max-w-[350px] cursor-pointer hover:text-white" onClick={()=>setViewing(m)}>{(m.content||'').slice(0,180)}</td>
-          <td>{m.importance||0}</td>
-          <td><Btn variant="danger" onClick={()=>deleteEntry(m.id)}>Del</Btn></td>
-        </tr>
-      ))}</tbody></table></>
-    )}</Card>
+  return (
+    <div className="fade-in">
+      <PageTitle sub="Search all brain entries by content, type, source, and date">Brain Search</PageTitle>
 
-    <Modal open={!!viewing} onClose={()=>setViewing(null)} title={`Brain Entry #${viewing?.id}`}>
-      {viewing&&(<div>
-        <div className="flex gap-2 mb-2"><Pill>{describeType(viewing.memory_type)}</Pill><span className="mono text-dim text-xs">{viewing.source}</span></div>
-        <div className="text-dim text-xs mb-3">{friendlyDate(viewing.created_at)} | Importance: {viewing.importance||0}</div>
-        <pre className="bg-bg p-3 rounded text-xs max-h-[400px] overflow-y-auto">{viewing.content}</pre>
-        {viewing.tags&&<div className="mt-2">{viewing.tags.map(t=><Pill key={t}>{t}</Pill>)}</div>}
-      </div>)}
-    </Modal>
-
-    <Modal open={adding} onClose={()=>setAdding(false)} title="Add Brain Entry (T10 HAM Manual)">
-      <div className="space-y-3">
-        <div><label className="text-[10px] text-dim uppercase">Source</label><input value={newEntry.source} onChange={e=>setNewEntry({...newEntry,source:e.target.value})} placeholder="e.g. aoa_manual_note" /></div>
-        <div><label className="text-[10px] text-dim uppercase">Memory Type</label><input value={newEntry.memory_type} onChange={e=>setNewEntry({...newEntry,memory_type:e.target.value})} placeholder="e.g. ccwa_training_note, writing_standards" /></div>
-        <div><label className="text-[10px] text-dim uppercase">Content</label><textarea rows={6} value={newEntry.content} onChange={e=>setNewEntry({...newEntry,content:e.target.value})} placeholder="The actual content..." /></div>
-        <div><label className="text-[10px] text-dim uppercase">Importance (1-10)</label><input type="number" min="1" max="10" value={newEntry.importance} onChange={e=>setNewEntry({...newEntry,importance:e.target.value})} /></div>
-        <Btn variant="primary" size="md" onClick={addEntry}>Save to Brain</Btn>
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <input value={query} onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && search(0)}
+          placeholder="Search content, source..." className="flex-1 min-w-[200px] text-sm" />
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          className="w-auto bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1.5 text-xs text-gray-300">
+          <option value="">All Types ({types.length})</option>
+          {types.map(t => <option key={t} value={t}>{describeType(t)} ({t})</option>)}
+        </select>
+        <Btn variant="primary" onClick={() => search(0)}>Search</Btn>
       </div>
-    </Modal>
-  </div>);
+
+      {loading ? <Loading text="Searching brain..." /> : (
+        <>
+          <div className="text-xs text-dim mb-3">
+            {total.toLocaleString()} entries found
+            {query && <span> matching "{query}"</span>}
+            {typeFilter && <span> in {describeType(typeFilter)}</span>}
+          </div>
+
+          <Card>
+            {results.length === 0 ? <Empty text="No entries found" /> : (
+              <div className="space-y-0">
+                {results.map((entry, i) => (
+                  <div key={entry.id || i} className="border-b border-white/[0.03] last:border-0 py-2.5 px-1 cursor-pointer hover:bg-white/[0.02] transition-all"
+                    onClick={() => setSelected(entry)}>
+                    <div className="flex items-start gap-2">
+                      <Tag variant="info">{describeType(entry.memory_type)}</Tag>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-gray-300 truncate">{contentPreview(entry.content)}</div>
+                        <div className="text-[10px] text-dim mt-0.5">
+                          {entry.source && <span>{entry.source}</span>}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-dim whitespace-nowrap">{friendlyDate(entry.created_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {total > limit && (
+            <div className="flex justify-center gap-2 mt-4">
+              <Btn disabled={offset === 0} onClick={() => search(Math.max(0, offset - limit))}>Previous</Btn>
+              <span className="text-xs text-dim self-center">{offset + 1}–{Math.min(offset + limit, total)} of {total.toLocaleString()}</span>
+              <Btn disabled={offset + limit >= total} onClick={() => search(offset + limit)}>Next</Btn>
+            </div>
+          )}
+        </>
+      )}
+
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.memory_type || 'Entry'} wide>
+        {selected && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div><span className="text-[10px] text-dim block">Type</span><Tag variant="info">{describeType(selected.memory_type)}</Tag></div>
+              <div><span className="text-[10px] text-dim block">Source</span><span className="text-white break-all">{selected.source || '—'}</span></div>
+              <div><span className="text-[10px] text-dim block">Created</span><span className="text-white">{friendlyDate(selected.created_at)}</span></div>
+              <div><span className="text-[10px] text-dim block">Importance</span><span className="text-white">{selected.importance ?? '—'}</span></div>
+            </div>
+            {selected.tags?.length > 0 && (
+              <div><span className="text-[10px] text-dim block mb-1">Tags</span>
+                {selected.tags.map((t, i) => <Tag key={i} variant="dim">{t}</Tag>)}
+              </div>
+            )}
+            <div>
+              <span className="text-[10px] text-dim block mb-1">Content</span>
+              <pre className="text-xs text-gray-300 whitespace-pre-wrap bg-white/[0.02] rounded-lg p-3 max-h-[400px] overflow-y-auto mono">
+                {parseContent(selected.content)}
+              </pre>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
 }
