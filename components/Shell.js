@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import AnimatedBackground, { BgProvider, BackgroundPicker } from './Background';
+import AlertBanner from './AlertBanner';
 import { AuthGate, ABAChatPanel, useABAChat, ContextMenu } from './ABAChat';
 import { ABACIA_URL } from '../lib/config';
 
@@ -38,7 +39,10 @@ export default function Shell({ children }) {
               <img src="https://i.imgur.com/0be7HCF.png" alt="" className="w-6 h-6 rounded-full" />
               <span className="text-sm font-semibold text-white"><span className="text-purple">AOA</span> Portal</span>
             </div>
-            <div className="p-4 md:p-6">{children}</div>
+            <div className="p-4 md:p-6">
+              <AlertBanner />
+              {children}
+            </div>
           </main>
           <ABAChatPanel chat={chat} />
           <ContextMenu x={ctxMenu.x} y={ctxMenu.y} itemLabel={ctxMenu.item?.label}

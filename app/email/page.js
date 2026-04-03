@@ -61,16 +61,18 @@ function detectCodePath(email) {
 export default function EmailPage() {
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [grantFilter, setGrantFilter] = useState('all');
+  const [hoursFilter, setHoursFilter] = useState('24');
   const [selected, setSelected] = useState(null);
   const [codePath, setCodePath] = useState(null);
   const [killing, setKilling] = useState(false);
 
   useEffect(() => {
-    fetch('/api/email').then(r => r.json()).then(d => {
+    fetch(`/api/email?grant=${grantFilter}&hours=${hoursFilter}`).then(r => r.json()).then(d => {
       setEmails(d.emails || d.data || []);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [grantFilter, hoursFilter]);
 
   const openTrace = (email) => {
     setCodePath(detectCodePath(email));
@@ -97,7 +99,24 @@ export default function EmailPage() {
   return (
     <div className="fade-in">
       <PageTitle sub="Trace every email ABA sent or processed — click any email to see the code path" right={
-        <Btn onClick={() => window.location.reload()}>Refresh</Btn>
+        <div className="flex gap-2 items-center flex-wrap">
+          <select value={grantFilter} onChange={e => setGrantFilter(e.target.value)}
+            className="w-auto bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1.5 text-xs text-gray-300">
+            <option value="all">All Grants</option>
+            <option value="claudette">Claudette (ABA)</option>
+            <option value="brandon_personal">Brandon Personal</option>
+            <option value="bdif">BDIF</option>
+            <option value="brandon_gmg">Brandon GMG</option>
+          </select>
+          <select value={hoursFilter} onChange={e => setHoursFilter(e.target.value)}
+            className="w-auto bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1.5 text-xs text-gray-300">
+            <option value="6">6 hours</option>
+            <option value="24">24 hours</option>
+            <option value="72">3 days</option>
+            <option value="168">1 week</option>
+          </select>
+          <Btn onClick={() => window.location.reload()}>Refresh</Btn>
+        </div>
       }>Email Trace</PageTitle>
 
       <div className="grid grid-cols-3 gap-3 mb-6">

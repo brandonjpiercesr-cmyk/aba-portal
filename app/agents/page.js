@@ -9,6 +9,24 @@ export default function AgentsPage() {
   const [deptFilter, setDeptFilter] = useState('');
   const [auditFilter, setAuditFilter] = useState('');
   const [selected, setSelected] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [editJD, setEditJD] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const saveJD = async () => {
+    if (!selected || !editJD.trim()) return;
+    setSaving(true);
+    try {
+      await fetch('/api/agents', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selected.id, full_description: editJD })
+      });
+      selected.full_description = editJD;
+      setEditing(false);
+    } catch {}
+    setSaving(false);
+  };
 
   useEffect(() => {
     fetch('/api/agents').then(r => r.json()).then(d => {
@@ -105,8 +123,23 @@ export default function AgentsPage() {
             </div>
             {selected.full_description && (
               <div>
-                <span className="text-[10px] text-dim block mb-1">Job Description</span>
-                <pre className="text-xs text-gray-300 whitespace-pre-wrap bg-white/[0.02] rounded-lg p-3 max-h-[300px] overflow-y-auto">{selected.full_description}</pre>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] text-dim">Job Description</span>
+                  <Btn size="sm" onClick={() => { setEditing(!editing); setEditJD(selected.full_description || ''); }}>
+                    {editing ? 'Cancel' : 'Edit'}
+                  </Btn>
+                </div>
+                {editing ? (
+                  <div>
+                    <textarea value={editJD} onChange={e => setEditJD(e.target.value)}
+                      className="text-xs w-full min-h-[200px] font-mono" rows={12} />
+                    <Btn variant="primary" size="sm" onClick={saveJD} disabled={saving} className="mt-2">
+                      {saving ? 'Saving...' : 'Save JD'}
+                    </Btn>
+                  </div>
+                ) : (
+                  <pre className="text-xs text-gray-300 whitespace-pre-wrap bg-white/[0.02] rounded-lg p-3 max-h-[300px] overflow-y-auto">{selected.full_description}</pre>
+                )}
               </div>
             )}
             {(selected.recent_actions || []).length > 0 && (

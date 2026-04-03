@@ -14,6 +14,18 @@ export default function BrainPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addData, setAddData] = useState({ source: '', memory_type: 'manual_entry', content: '', importance: 5 });
   const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+
+  const deleteEntry = async (id) => {
+    if (!confirm('Delete this brain entry?')) return;
+    setDeleting(id);
+    try {
+      await fetch('/api/brain?id=' + id, { method: 'DELETE' });
+      setSelected(null);
+      search(offset);
+    } catch {}
+    setDeleting(null);
+  };
   const limit = 50;
 
   const addEntry = async () => {
@@ -129,6 +141,11 @@ export default function BrainPage() {
               <div><span className="text-[10px] text-dim block">Source</span><span className="text-white break-all">{selected.source || '—'}</span></div>
               <div><span className="text-[10px] text-dim block">Created</span><span className="text-white">{friendlyDate(selected.created_at)}</span></div>
               <div><span className="text-[10px] text-dim block">Importance</span><span className="text-white">{selected.importance ?? '—'}</span></div>
+              <div><span className="text-[10px] text-dim block">Actions</span>
+                <Btn variant="danger" size="sm" onClick={() => deleteEntry(selected.id)} disabled={deleting === selected.id}>
+                  {deleting === selected.id ? 'Deleting...' : 'Delete'}
+                </Btn>
+              </div>
             </div>
             {selected.tags?.length > 0 && (
               <div><span className="text-[10px] text-dim block mb-1">Tags</span>
