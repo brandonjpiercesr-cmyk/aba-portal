@@ -45,7 +45,8 @@ export async function POST(req) {
       }
     };
 
-    await sb.from('aba_memory').upsert({
+    await sb.from('aba_memory').delete().eq('source', FAILOVER_SOURCE).eq('memory_type', 'system_override');
+    await sb.from('aba_memory').insert({
       source: FAILOVER_SOURCE,
       memory_type: 'system_override',
       content: JSON.stringify(content),
@@ -55,7 +56,7 @@ export async function POST(req) {
       abcd_tag: 'BOTH',
       is_system: true,
       air_processed: true,
-    }, { onConflict: 'source' });
+    });
 
     return NextResponse.json({ success: true, ...content });
   } catch (err) {

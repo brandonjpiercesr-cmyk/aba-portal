@@ -49,8 +49,10 @@ export async function POST(req) {
     const sw = SWITCHES[id];
     if (!sw) return NextResponse.json({ error: 'Unknown switch: ' + id }, { status: 400 });
 
+    // Delete existing override first, then insert fresh (source is not unique, upsert fails)
     if (action === 'kill') {
-      await sb.from('aba_memory').upsert({
+      await sb.from('aba_memory').delete().eq('source', sw.source).eq('memory_type', 'system_override');
+      await sb.from('aba_memory').insert({
         source: sw.source,
         memory_type: 'system_override',
         content: JSON.stringify({
@@ -59,14 +61,19 @@ export async function POST(req) {
           disabled_by: 'brandon_T10_via_AOA',
           reason: reason || 'Killed via AOA Portal kill switch',
         }),
+        user_id: 'brandon',
         importance: 10,
         tags: ['system_override', 'kill_switch', id],
-      }, { onConflict: 'source' });
+        abcd_tag: 'BOTH',
+        is_system: true,
+        air_processed: true,
+      });
       return NextResponse.json({ success: true, action: 'killed', switch: id });
     }
 
     if (action === 'enable') {
-      await sb.from('aba_memory').upsert({
+      await sb.from('aba_memory').delete().eq('source', sw.source).eq('memory_type', 'system_override');
+      await sb.from('aba_memory').insert({
         source: sw.source,
         memory_type: 'system_override',
         content: JSON.stringify({
@@ -75,9 +82,13 @@ export async function POST(req) {
           enabled_by: 'brandon_T10_via_AOA',
           reason: reason || 'Re-enabled via AOA Portal',
         }),
+        user_id: 'brandon',
         importance: 10,
         tags: ['system_override', 'kill_switch', id],
-      }, { onConflict: 'source' });
+        abcd_tag: 'BOTH',
+        is_system: true,
+        air_processed: true,
+      });
       return NextResponse.json({ success: true, action: 'enabled', switch: id });
     }
 
