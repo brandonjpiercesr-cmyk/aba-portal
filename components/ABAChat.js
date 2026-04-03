@@ -41,13 +41,22 @@ export function AuthGate({ children }) {
     catch (e) { setError(e.message); }
   };
 
-  const verifyCode = () => {
-    // T10 access code — stored in memory, not hardcoded
-    if (authCode === '0402' || authCode === 'aoa2026') {
-      setCodeVerified(true);
-      setCodeError(false);
-      if (typeof window !== 'undefined') sessionStorage.setItem('aoa_t10', 'verified');
-    } else {
+  const verifyCode = async () => {
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: authCode })
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setCodeVerified(true);
+        setCodeError(false);
+        if (typeof window !== 'undefined') sessionStorage.setItem('aoa_t10', 'verified');
+      } else {
+        setCodeError(true);
+      }
+    } catch {
       setCodeError(true);
     }
   };

@@ -6,20 +6,25 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [cost, setCost] = useState(null);
   const [events, setEvents] = useState(null);
+  const [kills, setKills] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = () => {
     Promise.all([
       fetch('/api/dashboard').then(r => r.json()).catch(() => null),
       fetch('/api/cost').then(r => r.json()).catch(() => null),
-      fetch('/api/events?limit=10').then(r => r.json()).catch(() => null),
-    ]).then(([d, c, e]) => {
+      fetch('/api/events?limit=15').then(r => r.json()).catch(() => null),
+      fetch('/api/killswitch').then(r => r.json()).catch(() => null),
+    ]).then(([d, c, e, k]) => {
       setData(d);
       setCost(c);
       setEvents(e);
+      setKills(k);
       setLoading(false);
     });
-  }, []);
+  };
+
+  useEffect(load, []);
 
   if (loading) return <Loading text="Connecting to ABA brain..." />;
 
@@ -30,28 +35,35 @@ export default function Dashboard() {
     !['omi_received', 'heartbeat_cycle_complete', 'heartbeat_started'].includes(e.action)
   ).slice(0, 8);
 
-  const killSwitchCount = '—'; // loaded dynamically if needed
+  const switches = kills?.switches || [];
+  const killedCount = switches.filter(s => s.status === 'KILLED').length;
+  const activeCount = switches.filter(s => s.status === 'ACTIVE').length;
+
+  const brainTotal = d.brain?.total ?? d.brain?.last24h ?? '—';
 
   return (
     <div className="fade-in">
-      <PageTitle sub="Real-time ABA infrastructure overview">Dashboard</PageTitle>
+      <PageTitle sub="Real-time ABA infrastructure overview" right={
+        <button onClick={load} className="text-[10px] text-dim hover:text-purple transition-colors">Refresh</button>
+      }>Dashboard</PageTitle>
 
       {/* Top stats row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <Stat value={d.brain?.total} label="Brain Entries" href="/brain" sub={`${d.brain?.last24h ?? 0} today`} />
-        <Stat value={d.brain?.last24h} label="24h New Entries" href="/brain" color="text-purple" />
+        <Stat value={brainTotal} label="Brain Entries" href="/brain" sub={`${d.brain?.last24h ?? 0} in 24h`} />
+        <Stat value={d.brain?.lastHour} label="Last Hour" href="/brain" color="text-purple" />
         <Stat value={d.errors?.last24h} label="Errors (24h)" href="/errors" color={d.errors?.last24h > 0 ? 'text-red-400' : 'text-green-400'} />
         <Stat value={costToday !== '—' ? `$${costToday}` : '—'} label="API Cost Today" href="/cost" color="text-yellow-400" sub={`${costCalls} calls`} />
         <Stat value={d.agents?.total} label="Agents Loaded" href="/agents" color="text-cyan-400" />
         <Stat value={d.ababase?.status === 'up' ? 'Online' : 'Offline'} label="ABAbase" color={d.ababase?.status === 'up' ? 'text-green-400' : 'text-red-400'}
-          sub={d.ababase?.status === 'up' ? 'All systems go' : 'Check services'} href="/services" />
+          sub={d.ababase?.status === 'up' ? 'All systems go' : 'May be cold-starting'} href="/services" />
       </div>
 
       {/* Secondary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Stat value={d.emails?.last24h} label="Emails (24h)" href="/email" />
-        <Stat value={d.omi?.transcriptsLast24h} label="OMI Transcripts" color="text-purple-light" />
-        <Stat value={d.taste?.batchesLast24h} label="TASTE Batches" color="text-orange-400" />
+        <Stat value={`${activeCount} on / ${killedCount} off`} label="Kill Switches" href="/killswitch"
+          color={killedCount > 0 ? 'text-yellow-400' : 'text-green-400'} />
+        <Stat value={d.omi?.transcriptsLast24h} label="OMI Transcripts" color="text-purple" />
         <Stat value={d.training?.totalNotes} label="Training Notes" />
       </div>
 

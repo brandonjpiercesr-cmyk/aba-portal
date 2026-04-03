@@ -1,12 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, Stat, PageTitle, Loading, Btn, Tag, Empty, friendlyDate } from '../../components/UI';
+import { Card, Stat, PageTitle, Loading, Btn, Tag, Modal, Empty, friendlyDate } from '../../components/UI';
 
 export default function ServicesPage() {
   const [render, setRender] = useState([]);
   const [vercel, setVercel] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deploying, setDeploying] = useState(null);
+  const [envModal, setEnvModal] = useState(null);
+  const [envVars, setEnvVars] = useState([]);
+  const [envLoading, setEnvLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -31,10 +34,21 @@ export default function ServicesPage() {
     setTimeout(() => setDeploying(null), 3000);
   };
 
+  const showEnv = async (serviceId, serviceName) => {
+    setEnvModal(serviceName);
+    setEnvLoading(true);
+    try {
+      const res = await fetch(`/api/render?action=env&service=${serviceId}`).then(r => r.json());
+      setEnvVars(res.envVars || res.vars || res || []);
+    } catch { setEnvVars([]); }
+    setEnvLoading(false);
+  };
+
   if (loading) return <Loading text="Loading services..." />;
 
   const renderServices = Array.isArray(render) ? render : [];
   const vercelProjects = Array.isArray(vercel) ? vercel : [];
+  const activeRender = renderServices.filter(s => (s.service || s).suspended === 'not_suspended').length;
 
   return (
     <div className="fade-in">
@@ -43,8 +57,8 @@ export default function ServicesPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Stat value={renderServices.length} label="Render Services" color="text-cyan-400" />
         <Stat value={vercelProjects.length} label="Vercel Projects" color="text-white" />
-        <Stat value={renderServices.filter(s => (s.service || s).suspended === 'not_suspended').length} label="Active" color="text-green-400" />
-        <Stat value={renderServices.filter(s => (s.service || s).suspended !== 'not_suspended').length} label="Suspended" color="text-yellow-400" />
+        <Stat value={activeRender} label="Active" color="text-green-400" />
+        <Stat value={renderServices.length - activeRender} label="Suspended" color="text-yellow-400" />
       </div>
 
       <Card title={`Render Services (${renderServices.length})`}>
@@ -57,14 +71,15 @@ export default function ServicesPage() {
               const isActive = svc.suspended === 'not_suspended';
               return (
                 <div key={svc.id || i} className="border-b border-white/[0.03] last:border-0 py-3 px-1">
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isActive ? 'bg-green-400' : 'bg-yellow-400'}`} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-white font-medium">{svc.name}</div>
-                      {url && <a href={url} target="_blank" rel="noopener" className="text-[10px] text-purple hover:underline">{url}</a>}
+                      {url && <a href={url} target="_blank" rel="noopener" className="text-[10px] text-purple hover:underline block truncate">{url}</a>}
                     </div>
                     <Tag variant={isActive ? 'ok' : 'warn'}>{isActive ? 'Active' : 'Suspended'}</Tag>
-                    <Btn size="sm" onClick={() => deploy(svc.id)} disabled={deploying === svc.id}>
+                    <Btn size="sm" onClick={() => showEnv(svc.id, svc.name)}>Env Vars</Btn>
+                    <Btn size="sm" variant="primary" onClick={() => deploy(svc.id)} disabled={deploying === svc.id}>
                       {deploying === svc.id ? 'Deploying...' : 'Deploy'}
                     </Btn>
                   </div>
@@ -86,7 +101,7 @@ export default function ServicesPage() {
                     <span className="w-2 h-2 rounded-full bg-white flex-shrink-0" />
                     <div className="flex-1">
                       <span className="text-xs text-white">{p.name}</span>
-                      {p.link?.type && <span className="text-[10px] text-dim ml-2">{p.framework || ''}</span>}
+                      {p.framework && <span className="text-[10px] text-dim ml-2">{p.framework}</span>}
                     </div>
                     <span className="text-[10px] text-dim">{p.updatedAt ? friendlyDate(p.updatedAt) : ''}</span>
                   </div>
@@ -96,6 +111,21 @@ export default function ServicesPage() {
           </div>
         </Card>
       )}
+
+      <Modal open={!!envModal} onClose={() => { setEnvModal(null); setEnvVars([]); }} title={`Env Vars — ${envModal}`}>
+        {envLoading ? <Loading text="Loading env vars..." /> : (
+          envVars.length === 0 ? <Empty text="No env vars found or access denied" /> : (
+            <div className="space-y-1">
+              {envVars.map((ev, i) => (
+                <div key={i} className="flex justify-between items-center py-1.5 border-b border-white/[0.03] last:border-0">
+                  <span className="text-xs text-cyan-400 font-mono">{ev.key}</span>
+                  <span className="text-xs text-dim font-mono">{ev.value}</span>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </Modal>
     </div>
   );
 }
