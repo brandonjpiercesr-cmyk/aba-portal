@@ -10,12 +10,14 @@ export async function GET() {
     const hourAgo = new Date(now - 3600000).toISOString();
 
     // Real cost tracking data from brain
-    const { data: todayData } = await sb.from('aba_memory')
+    const { data: todayData, error: todayError } = await sb.from('aba_memory')
       .select('content, created_at')
       .eq('memory_type', 'cost_tracking')
       .gte('created_at', todayStart)
       .order('created_at', { ascending: false })
       .limit(500);
+    
+    console.log('[COST DEBUG] todayStart:', todayStart, 'now:', now.toISOString(), 'rows:', todayData?.length, 'error:', todayError?.message);
 
     const { data: weekData } = await sb.from('aba_memory')
       .select('content')
