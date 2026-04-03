@@ -11,9 +11,13 @@ export default function Shell({ children }) {
   const [ctxMenu, setCtxMenu] = useState({ x: null, y: null, item: null });
   const [mobileNav, setMobileNav] = useState(false);
 
-  // Warm ping ABAbase on portal load so health check doesn't show "down"
+  // Keep-alive ping — hits ABAbase every 4 minutes while portal is open
+  // Render starter plan sleeps after 15 min of no traffic. This keeps it awake.
   useEffect(() => {
-    fetch(`${ABACIA_URL}/api/health`, { mode: 'no-cors' }).catch(() => {});
+    const ping = () => fetch(`${ABACIA_URL}/api/health`, { mode: 'no-cors' }).catch(() => {});
+    ping(); // immediate
+    const iv = setInterval(ping, 4 * 60 * 1000); // every 4 minutes
+    return () => clearInterval(iv);
   }, []);
 
   function handleContextMenu(e) {
