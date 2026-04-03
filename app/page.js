@@ -29,7 +29,7 @@ export default function Dashboard() {
   if (loading) return <Loading text="Connecting to ABA brain..." />;
 
   const d = data || {};
-  const costToday = cost?.today?.total_cost_usd ?? '—';
+  const costToday = cost?.today?.total_cost ?? '—';
   const costCalls = cost?.today?.total_calls ?? 0;
   const recentEvents = (events?.events || []).filter(e =>
     !['omi_received', 'heartbeat_cycle_complete', 'heartbeat_started'].includes(e.action)
@@ -82,7 +82,7 @@ export default function Dashboard() {
               <div className="border-t border-white/[0.04] pt-2 mt-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-dim">Cache hit rate</span>
-                  <span className="text-green-400">{cost?.today?.cache_hit_rate || '0%'}</span>
+                  <span className="text-green-400">{cost?.today?.cache_hit_rate ? cost.today.cache_hit_rate + '%' : '0%'}</span>
                 </div>
                 <div className="flex justify-between text-xs mt-1">
                   <span className="text-dim">Projected daily</span>

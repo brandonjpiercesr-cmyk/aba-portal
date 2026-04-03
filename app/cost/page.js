@@ -22,17 +22,17 @@ export default function CostPage() {
       <PageTitle sub="Real USD costs from every API call" right={<Btn onClick={load}>Refresh</Btn>}>Cost Tracking</PageTitle>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Stat value={`$${t.total_cost_usd ?? '—'}`} label="Today" color="text-yellow-400" sub={`${t.total_calls ?? 0} calls`} />
-        <Stat value={`$${h.total_cost_usd ?? '—'}`} label="Last Hour" color="text-orange-400" sub={`${h.total_calls ?? 0} calls`} />
-        <Stat value={`$${w.total_cost_usd ?? '—'}`} label="7-Day Total" sub={`${w.total_calls ?? 0} calls`} />
+        <Stat value={`$${t.total_cost ?? '—'}`} label="Today" color="text-yellow-400" sub={`${t.total_calls ?? 0} calls`} />
+        <Stat value={`$${h.cost ?? '—'}`} label="Last Hour" color="text-orange-400" sub={`${h.calls ?? 0} calls`} />
+        <Stat value={`$${w.total_cost ?? '—'}`} label="7-Day Total" sub={`${w.total_calls ?? 0} calls`} />
         <Stat value={`$${t.projected_daily ?? '—'}`} label="Projected Daily" color="text-red-400" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Stat value={t.total_input_tokens?.toLocaleString() ?? '—'} label="Input Tokens" />
-        <Stat value={t.total_output_tokens?.toLocaleString() ?? '—'} label="Output Tokens" />
+        <Stat value={t.input_tokens?.toLocaleString() ?? '—'} label="Input Tokens" />
+        <Stat value={t.output_tokens?.toLocaleString() ?? '—'} label="Output Tokens" />
         <Stat value={t.cache_hit_rate ?? '—'} label="Cache Hit Rate" color="text-green-400" />
-        <Stat value={t.cache_read_tokens?.toLocaleString() ?? '—'} label="Cache Read" color="text-cyan-400" />
+        <Stat value={t.cache_read?.toLocaleString() ?? '—'} label="Cache Read" color="text-cyan-400" />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-6">
@@ -76,18 +76,18 @@ export default function CostPage() {
         </Card>
       </div>
 
-      {data.recentCalls?.length > 0 && (
+      {data.recent_calls?.length > 0 && (
         <Card title="Recent API Calls">
           <table>
             <thead><tr><th>Time</th><th>Model</th><th>Channel</th><th>Tokens</th><th>Cost</th></tr></thead>
             <tbody>
-              {data.recentCalls.slice(0, 30).map((c, i) => (
+              {data.recent_calls.slice(0, 30).map((c, i) => (
                 <tr key={i}>
-                  <td className="text-dim">{friendlyTime(c.timestamp)}</td>
+                  <td className="text-dim">{friendlyTime(c.time)}</td>
                   <td><Tag variant="info">{c.model?.replace('claude-', '')}</Tag></td>
                   <td className="text-gray-300">{c.channel}</td>
-                  <td className="text-gray-400 font-mono">{(c.input_tokens + c.output_tokens)?.toLocaleString()}</td>
-                  <td className="text-yellow-400 font-mono">${c.cost_usd?.toFixed(4) ?? '—'}</td>
+                  <td className="text-gray-400 font-mono">{(c.input + c.output)?.toLocaleString()}</td>
+                  <td className="text-yellow-400 font-mono">${c.cost?.toFixed(4) ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
