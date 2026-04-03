@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, ADMIN_EMAILS } from '../lib/firebase';
 import { ABACIA_URL } from '../lib/config';
+import { ABALogoMedium, ABALogoLarge } from './ABAConsciousness';
 
 // ═══════════════════════════════════════════════════════════
 // T10 WARM AUTH GATE
@@ -65,7 +66,7 @@ export function AuthGate({ children }) {
     return (
       <div className="auth-overlay">
         <div className="text-center">
-          <img src="https://i.imgur.com/0be7HCF.png" alt="" className="w-16 h-16 mx-auto mb-4 rounded-full pulse" />
+          <div className="mx-auto mb-4 flex justify-center"><ABALogoMedium state="thinking" /></div>
           <p className="text-dim text-sm">Loading...</p>
         </div>
       </div>
@@ -77,7 +78,7 @@ export function AuthGate({ children }) {
     return (
       <div className="auth-overlay">
         <div className="glass-card p-8 max-w-sm w-full mx-4 text-center glow-purple">
-          <img src="https://i.imgur.com/0be7HCF.png" alt="" className="w-20 h-20 mx-auto mb-5 rounded-full" />
+          <div className="mx-auto mb-5 flex justify-center"><ABALogoLarge state="idle" /></div>
           <h2 className="text-lg font-bold text-white mb-1">AOA Portal</h2>
           <p className="text-dim text-xs mb-6">Anatomy of ABA — Operator Command Center</p>
           <button onClick={handleSignIn}
@@ -99,7 +100,7 @@ export function AuthGate({ children }) {
     return (
       <div className="auth-overlay">
         <div className="glass-card p-8 max-w-sm w-full mx-4 text-center glow-purple">
-          <img src="https://i.imgur.com/0be7HCF.png" alt="" className="w-16 h-16 mx-auto mb-4 rounded-full" />
+          <div className="mx-auto mb-4 flex justify-center"><ABALogoMedium state="listening" /></div>
           <h2 className="text-base font-bold text-white mb-1">Hey {user.displayName?.split(' ')[0] || 'there'}</h2>
           <p className="text-dim text-xs mb-5">This area requires your authorization code.</p>
           <input

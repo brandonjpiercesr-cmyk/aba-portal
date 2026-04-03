@@ -1,6 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ABALogoSmall } from './ABAConsciousness';
+import { useBgPicker } from './Background';
 
 const NAV = [
   { group: 'Command', items: [
@@ -17,6 +19,7 @@ const NAV = [
     { href: '/email', label: 'Email Trace', icon: '◫' },
   ]},
   { group: 'Infrastructure', items: [
+    { href: '/keys', label: 'Key Management', icon: '⚿' },
     { href: '/services', label: 'Services', icon: '◧' },
     { href: '/errors', label: 'Error Log', icon: '◬' },
   ]},
@@ -27,13 +30,14 @@ const NAV = [
 
 export default function Sidebar({ mobile, onClose }) {
   const pathname = usePathname();
+  const { setPickerOpen } = useBgPicker();
 
   return (
     <aside className={`${mobile ? 'fixed inset-0 z-50' : 'w-56 flex-shrink-0 h-screen sticky top-0 hidden md:block'}`}>
       {mobile && <div className="absolute inset-0 bg-black/60" onClick={onClose} />}
       <div className={`${mobile ? 'absolute left-0 top-0 w-64 h-full z-10' : 'w-full h-full'} bg-[rgba(15,23,42,0.85)] backdrop-blur-xl border-r border-white/[0.04] overflow-y-auto`}>
         <div className="px-4 py-4 border-b border-white/[0.04] flex items-center gap-3">
-          <img src="https://i.imgur.com/0be7HCF.png" alt="" className="w-7 h-7 rounded-full" />
+          <ABALogoSmall state="idle" />
           <div>
             <h1 className="text-sm font-bold text-white"><span className="text-purple">AOA</span> Portal</h1>
             <p className="text-[9px] text-dim mt-0.5">Anatomy of ABA</p>
@@ -61,8 +65,12 @@ export default function Sidebar({ mobile, onClose }) {
           </div>
         ))}
 
-        <div className="px-4 py-4 mt-4 border-t border-white/[0.04] text-[9px] text-dim/40 text-center">
-          T10 Operator Access
+        <div className="px-4 py-3 mt-4 border-t border-white/[0.04]">
+          <button onClick={() => setPickerOpen(true)}
+            className="w-full text-left px-3 py-2 rounded-lg text-[11px] text-dim hover:text-white hover:bg-white/[0.04] transition-all">
+            ◐ Change Background
+          </button>
+          <div className="text-[9px] text-dim/30 text-center mt-2">T10 Operator Access</div>
         </div>
       </div>
     </aside>

@@ -11,7 +11,26 @@ export default function BrainPage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addData, setAddData] = useState({ source: '', memory_type: 'manual_entry', content: '', importance: 5 });
+  const [adding, setAdding] = useState(false);
   const limit = 50;
+
+  const addEntry = async () => {
+    if (!addData.content.trim()) return;
+    setAdding(true);
+    try {
+      await fetch('/api/brain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addData)
+      });
+      setAddOpen(false);
+      setAddData({ source: '', memory_type: 'manual_entry', content: '', importance: 5 });
+      search(0);
+    } catch {}
+    setAdding(false);
+  };
 
   useEffect(() => {
     fetch('/api/brain?action=types').then(r => r.json()).then(d => setTypes(d.types || []));
@@ -46,7 +65,9 @@ export default function BrainPage() {
 
   return (
     <div className="fade-in">
-      <PageTitle sub="Search all brain entries by content, type, source, and date">Brain Search</PageTitle>
+      <PageTitle sub="Search all brain entries by content, type, source, and date" right={
+        <Btn variant="primary" onClick={() => setAddOpen(true)}>+ Add Entry</Btn>
+      }>Brain Search</PageTitle>
 
       <div className="flex gap-2 mb-4 flex-wrap">
         <input value={query} onChange={e => setQuery(e.target.value)}
@@ -122,6 +143,35 @@ export default function BrainPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Brain Entry">
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10px] text-dim block mb-1">Source (dot notation)</label>
+            <input value={addData.source} onChange={e => setAddData(d => ({ ...d, source: e.target.value }))}
+              placeholder="e.g. manual.note.20260403" className="text-xs" />
+          </div>
+          <div>
+            <label className="text-[10px] text-dim block mb-1">Memory Type</label>
+            <input value={addData.memory_type} onChange={e => setAddData(d => ({ ...d, memory_type: e.target.value }))}
+              placeholder="e.g. manual_entry, 911_rule, checkpoint" className="text-xs" />
+          </div>
+          <div>
+            <label className="text-[10px] text-dim block mb-1">Content</label>
+            <textarea value={addData.content} onChange={e => setAddData(d => ({ ...d, content: e.target.value }))}
+              placeholder="Brain entry content..." rows={5} className="text-xs" />
+          </div>
+          <div>
+            <label className="text-[10px] text-dim block mb-1">Importance (1-10)</label>
+            <input type="number" min={1} max={10} value={addData.importance}
+              onChange={e => setAddData(d => ({ ...d, importance: Number(e.target.value) }))} className="w-20 text-xs" />
+          </div>
+          <Btn variant="primary" onClick={addEntry} disabled={adding || !addData.content.trim()}>
+            {adding ? 'Adding...' : 'Add to Brain'}
+          </Btn>
+          <div className="text-[10px] text-dim">Tagged with T10_HAM_manual and aoa_portal automatically.</div>
+        </div>
       </Modal>
     </div>
   );
