@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { NYLAS_KEY, NYLAS_GRANTS } from '../../../lib/config';
 import { getSupabase } from '../../../lib/supabase';

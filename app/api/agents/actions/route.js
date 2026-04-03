@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { getSupabase } from '../../../../lib/supabase';
 export async function GET(req) {
