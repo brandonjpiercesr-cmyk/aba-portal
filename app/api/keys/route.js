@@ -79,7 +79,7 @@ export async function GET() {
 
     // ABAbase
     try {
-      const r = await fetch(`${ABACIA_URL}/api/health`, { signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`${ABACIA_URL}/health`, { signal: AbortSignal.timeout(8000) });
       health.ababase = r.ok ? 'up' : 'down';
     } catch { health.ababase = 'down'; }
 

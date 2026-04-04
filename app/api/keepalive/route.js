@@ -8,8 +8,8 @@ import { ABACIA_URL } from '../../../lib/config';
 export async function GET() {
   const results = {};
   const targets = [
-    { name: 'abacia-services', url: `${ABACIA_URL}/api/health` },
-    { name: 'reach-services', url: 'https://aba-reach.onrender.com/api/health' },
+    { name: 'abacia-services', url: `${ABACIA_URL}/health` },
+    { name: 'reach-services', url: 'https://aba-reach.onrender.com/health' },
   ];
 
   for (const target of targets) {

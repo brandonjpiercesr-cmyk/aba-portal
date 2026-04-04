@@ -9,7 +9,7 @@ export async function GET() {
 
     // 1. ABAbase health
     try {
-      const r = await fetch(`${ABACIA_URL}/api/health`, { signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`${ABACIA_URL}/health`, { signal: AbortSignal.timeout(8000) });
       checks.ababase = { status: r.ok ? 'up' : 'down', code: r.status };
     } catch { checks.ababase = { status: 'down', code: 0 }; }
 

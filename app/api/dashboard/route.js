@@ -39,7 +39,7 @@ export async function GET() {
     let ababaseHealth = 'unknown';
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const r = await fetch(`${ABACIA_URL}/api/health`, { signal: AbortSignal.timeout(8000) });
+        const r = await fetch(`${ABACIA_URL}/health`, { signal: AbortSignal.timeout(8000) });
         if (r.ok) { ababaseHealth = 'up'; break; }
       } catch {}
       if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
