@@ -29,6 +29,7 @@ const NAV = [
     { href: '/awa', label: 'AWA Jobs', icon: '◓' },
   ]},
   { group: 'Infrastructure', items: [
+    { href: '/shadow', label: 'SHADOW Oversight', icon: '◔' },
     { href: '/keys', label: 'Key Management', icon: '⚿' },
     { href: '/services', label: 'Services', icon: '◧' },
     { href: '/errors', label: 'Error Log', icon: '◬' },
