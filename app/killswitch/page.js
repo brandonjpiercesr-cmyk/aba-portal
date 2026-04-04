@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, Stat, PageTitle, Loading, Btn, Tag, friendlyDate } from '../../components/UI';
+import { Card, Stat, PageTitle, Loading, Btn, friendlyDate } from '../../components/UI';
 
 export default function KillSwitchPage() {
   const [switches, setSwitches] = useState([]);
@@ -26,7 +26,7 @@ export default function KillSwitchPage() {
       });
       await new Promise(r => setTimeout(r, 500));
       load();
-    } catch (err) { console.error(err); }
+    } catch {}
     setToggling(null);
   };
 

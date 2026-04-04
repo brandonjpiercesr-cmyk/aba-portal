@@ -115,7 +115,7 @@ export default function EmailPage() {
             <option value="72">3 days</option>
             <option value="168">1 week</option>
           </select>
-          <Btn onClick={() => window.location.reload()}>Refresh</Btn>
+          <Btn onClick={() => { setLoading(true); fetch(\`/api/email?grant=\${grantFilter}&hours=\${hoursFilter}\`).then(r => r.json()).then(d => { setEmails(d.emails || d.data || []); setLoading(false); }).catch(() => setLoading(false)); }}>Refresh</Btn>
         </div>
       }>Email Trace</PageTitle>
 

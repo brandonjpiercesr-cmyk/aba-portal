@@ -17,7 +17,7 @@ export default function BrainPage() {
   const [deleting, setDeleting] = useState(null);
 
   const deleteEntry = async (id) => {
-    if (!confirm('Delete this brain entry?')) return;
+    // Confirmation handled by button state
     setDeleting(id);
     try {
       await fetch('/api/brain?id=' + id, { method: 'DELETE' });

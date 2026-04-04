@@ -16,7 +16,7 @@ export function AuthGate({ children }) {
   const [codeError, setCodeError] = useState(false);
 
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? sessionStorage.getItem('aoa_t10') : null;
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('aoa_t10') : null;
     if (saved === 'verified') setCodeVerified(true);
   }, []);
 
@@ -53,7 +53,7 @@ export function AuthGate({ children }) {
       if (data.valid) {
         setCodeVerified(true);
         setCodeError(false);
-        if (typeof window !== 'undefined') sessionStorage.setItem('aoa_t10', 'verified');
+        if (typeof window !== 'undefined') localStorage.setItem('aoa_t10', 'verified');
       } else {
         setCodeError(true);
       }

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { NextResponse } from 'next/server';
 
 const GH_TOKEN = process.env.GITHUB_TOKEN;
