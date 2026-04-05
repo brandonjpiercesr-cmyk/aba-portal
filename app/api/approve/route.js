@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { getSupabase } from '../../../lib/supabase';
-import { NYLAS_KEY, NYLAS_GRANTS } from '../../../lib/config';
+// ⬡B:aoa.audit_fix:FIX:approve_unused_imports:20260404⬡ Removed unused NYLAS imports
 
 export async function GET() {
   try {

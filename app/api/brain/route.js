@@ -9,7 +9,8 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q');
     const type = searchParams.get('type');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // ⬡B:aoa.audit_fix:FIX:M6_brain_limit_cap:20260404⬡
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200);
     const offset = parseInt(searchParams.get('offset') || '0');
     const action = searchParams.get('action');
 
@@ -37,6 +38,8 @@ export async function POST(req) {
       source: body.source || `aoa_manual_${Date.now()}`,
       memory_type: body.memory_type || 'manual_entry',
       content: body.content,
+      // ⬡B:aoa.audit_fix:FIX:M7_brain_post_user_id:20260404⬡
+      user_id: body.user_id || 'aoa_portal_user',
       importance: body.importance || 5,
       tags: body.tags || ['aoa_portal', 'T10_HAM_manual'],
     }).select();

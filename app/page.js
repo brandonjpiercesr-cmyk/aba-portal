@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, Stat, PageTitle, Loading, Tag, friendlyDate, timeAgo } from '../components/UI';
+import { Card, Stat, PageTitle, Loading, Tag, timeAgo } from '../components/UI';;
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -55,7 +55,7 @@ export default function Dashboard() {
         <Stat value={costToday !== '—' ? `$${costToday}` : '—'} label="API Cost Today" href="/cost" color="text-yellow-400" sub={`${costCalls} calls`} />
         <Stat value={d.agents?.total} label="Agents Loaded" href="/agents" color="text-cyan-400" />
         <Stat value={d.ababase?.status === 'up' ? 'Online' : 'Offline'} label="ABAbase" color={d.ababase?.status === 'up' ? 'text-green-400' : 'text-red-400'}
-          sub={d.ababase?.status === 'up' ? 'All systems go' : 'May be cold-starting'} href="/services" />
+          sub={d.ababase?.status === 'up' ? 'All systems go' : 'Check services page'} href="/services" />
       </div>
 
       {/* Secondary stats */}
@@ -76,7 +76,7 @@ export default function Dashboard() {
               {cost.today.by_model.map(m => (
                 <div key={m.name} className="flex justify-between items-center text-xs">
                   <span className="text-gray-300">{m.name}</span>
-                  <span className="text-yellow-400 font-mono">${m.cost.toFixed(4)}</span>
+                  <span className="text-yellow-400 font-mono">${(m.cost || 0).toFixed(4)}</span>
                 </div>
               ))}
               <div className="border-t border-white/[0.04] pt-2 mt-2">
@@ -104,7 +104,7 @@ export default function Dashboard() {
                     <span className="text-gray-300">{ev.action?.replace(/_/g, ' ')}</span>
                     {ev.message_preview && <span className="text-dim ml-1 truncate block text-[10px]">{ev.message_preview.slice(0, 60)}</span>}
                   </div>
-                  <span className="text-dim text-[10px] whitespace-nowrap">{timeAgo(ev._created || ev.timestamp)}</span>
+                  <span className="text-dim text-[10px] whitespace-nowrap">{timeAgo(ev._created || ev.timestamp || new Date().toISOString())}</span>
                 </div>
               ))}
             </div>

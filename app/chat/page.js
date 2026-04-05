@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { PageTitle, Loading, Btn, Tag } from '../../components/UI';
 import { ABACIA_URL } from '../../lib/config';
+import { auth } from '../../lib/firebase';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
@@ -26,7 +27,7 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          user_id: 'brandon',
+          user_id: auth.currentUser?.email || 'aoa_portal_user',
           channel: 'aoa_portal',
           context: { source: 'aoa_portal_chat_page', admin: true, t10: true }
         })

@@ -7,7 +7,7 @@ const SWITCHES = {
   mars_email: { label: 'MARS Report Emails', source: 'system_override.mars_email', description: 'Meeting After Report System emails to Brandon' },
   proactive_email: { label: 'Proactive/DAWN Emails', source: 'system_override.proactive_email', description: 'Scheduled proactive updates and AWA alerts' },
   taste_transcript: { label: 'TASTE Transcript Emails', source: 'system_override.taste_transcript', description: 'Raw transcript emails (SHOULD STAY KILLED)' },
-  cook_scaffold: { label: 'COOK Scaffold Emails', source: 'system_override.cook_scaffold', description: 'Internal agent-to-agent delivery emails' },
+  cook_scaffold: { label: 'COOK Task Executor', source: 'system_override.cook_scaffold', description: 'Automated task execution via Haiku (was Sonnet, fixed April 3)' },
   idealist_batch: { label: 'Idealist Job Scanner', source: 'system_override.idealist_batch', description: 'Automated Idealist email scanning ($2-4 per run)' },
   omi_mars_trigger: { label: 'OMI → MARS Pipeline', source: 'system_override.omi_mars_trigger', description: 'OMI pendant triggering MARS reports on meeting end' },
   heartbeat_cron: { label: 'Full Heartbeat Cron', source: 'system_override.heartbeat_cron', description: 'All scheduled background tasks' },
@@ -25,6 +25,8 @@ export async function GET() {
     const overrides = {};
     for (const row of (data || [])) {
       try {
+        // ⬡B:aoa.audit_fix:FIX:M5_killswitch_newest_wins:20260404⬡ Keep newest entry (query is DESC)
+        if (overrides[row.source]) continue;
         const parsed = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
         overrides[row.source] = { ...parsed, created_at: row.created_at };
       } catch {}

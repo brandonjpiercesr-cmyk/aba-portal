@@ -11,8 +11,8 @@ export default function Shell({ children }) {
   const [ctxMenu, setCtxMenu] = useState({ x: null, y: null, item: null });
   const [mobileNav, setMobileNav] = useState(false);
 
+  // ⬡B:aoa.audit_fix:FIX:L14_shell_keepalive:20260404⬡
   // Keep-alive ping — hits ABAbase every 4 minutes while portal is open
-  // Render starter plan sleeps after 15 min of no traffic. This keeps it awake.
   useEffect(() => {
     const ping = () => fetch(`${ABACIA_URL}/health`, { mode: 'no-cors' }).catch(() => {});
     ping(); // immediate
@@ -24,8 +24,11 @@ export default function Shell({ children }) {
     const target = e.target.closest('[data-aba-ctx]');
     if (target) {
       e.preventDefault();
-      const ctx = JSON.parse(target.dataset.abaCtx || '{}');
-      setCtxMenu({ x: e.clientX, y: e.clientY, item: ctx });
+      // ⬡B:aoa.audit_fix:FIX:L15_json_parse_guard:20260404⬡
+      try {
+        const ctx = JSON.parse(target.dataset.abaCtx || '{}');
+        setCtxMenu({ x: e.clientX, y: e.clientY, item: ctx });
+      } catch { /* malformed context data, ignore */ }
     }
   }
 

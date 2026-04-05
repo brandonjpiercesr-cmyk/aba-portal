@@ -27,14 +27,26 @@ export async function GET(req) {
       .gte('created_at', sinceISO)
       .limit(500);
 
-    // Build a set of subjects/recipients that ABA sent
-    const abaFingerprints = new Set();
+    // ⬡B:aoa.audit_fix:FIX:H3_email_fingerprint:20260404⬡
+    // Build specific fingerprint sets — source keys and message IDs only, NOT full content blobs.
+    // Old approach matched subject substrings against entire brain content → massive false positives.
+    const abaSourceKeys = new Set();
+    const abaMessageIds = new Set();
     for (const m of (dedupMarkers || [])) {
-      const c = (m.content || '').toLowerCase();
       const s = (m.source || '').toLowerCase();
-      // Extract key phrases from dedup markers
-      abaFingerprints.add(s);
-      abaFingerprints.add(c);
+      abaSourceKeys.add(s);
+      // Extract Nylas message IDs from content if present
+      try {
+        const c = typeof m.content === 'string' ? JSON.parse(m.content) : m.content;
+        if (c?.message_id) abaMessageIds.add(c.message_id);
+        if (c?.nylas_id) abaMessageIds.add(c.nylas_id);
+        if (c?.id) abaMessageIds.add(c.id);
+      } catch {
+        // Content might be a plain string (dedup slug), add as source key
+        if (m.content && typeof m.content === 'string' && m.content.length < 200) {
+          abaSourceKeys.add(m.content.toLowerCase());
+        }
+      }
     }
 
     for (const [name, grant] of grantsToQuery) {
@@ -60,7 +72,10 @@ export async function GET(req) {
             subject.includes('draft for review') ||
             subject.includes('approvals waiting') ||
             subject.includes('pipeline update') ||
-            [...abaFingerprints].some(fp => fp.includes(subject.slice(0, 40)) || fp.includes(m.id));
+            // ⬡B:aoa.audit_fix:FIX:H3b_specific_matching:20260404⬡
+            // Match on message ID (specific) or source key slug (specific), NOT content blobs
+            abaMessageIds.has(m.id) ||
+            [...abaSourceKeys].some(sk => sk.includes(m.id) || (m.thread_id && sk.includes(m.thread_id)));
 
           results.push({
             grant: name, grantLabel,

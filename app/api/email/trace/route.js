@@ -142,7 +142,6 @@ export async function GET(req) {
     if (trace.dedup_markers.length > 0) {
       const marker = trace.dedup_markers[0];
       explanation += 'ABA has a dedup marker (confirms ABA sent this). ';
-      if ((marker.source || '').includes('eric@')) explanation += 'NOTE: This was sent to Eric (should not happen in PRE-ALPHA). ';
     }
     if (trace.send_logs.length > 0) explanation += `IMAN sent this (${trace.send_logs.length} send log(s) found). `;
     if (trace.task_logs.length > 0) explanation += 'Triggered by an inbound email AIR processed as a task. ';
@@ -167,11 +166,12 @@ export async function GET(req) {
     try {
       const { identifyCodePath } = require('../../../../lib/codePaths');
       codePaths = identifyCodePath(allResults);
-    } catch (e) { console.log('Code path map not available:', e.message); }
+    } catch (e) { /* codePaths module not available, skip */ }
 
     // Build detailed explanation from code paths
+    // ⬡B:aoa.audit_fix:FIX:M11_keep_narrative:20260404⬡ APPEND code paths, don't overwrite narrative
     if (codePaths.length > 0) {
-      explanation = '';
+      explanation += '\n\nCODE PATH ANALYSIS:\n';
       for (const cp of codePaths) {
         explanation += cp.trigger + '\n\n';
         explanation += 'CODE PATH:\n' + cp.chain.map((s, i) => `${i + 1}. ${s}`).join('\n') + '\n\n';

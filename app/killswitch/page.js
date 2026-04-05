@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, Stat, PageTitle, Loading, Btn, friendlyDate } from '../../components/UI';
+import { Stat, PageTitle, Loading, Btn, friendlyDate } from '../../components/UI';
 
 export default function KillSwitchPage() {
   const [switches, setSwitches] = useState([]);

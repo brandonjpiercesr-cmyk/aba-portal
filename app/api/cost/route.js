@@ -7,7 +7,11 @@ export async function GET() {
   try {
     const sb = getSupabase();
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    // ⬡B:aoa.audit_fix:FIX:H7_timezone_eastern:20260404⬡
+    // "Today" must be Eastern midnight, not UTC midnight. Brandon is in NC (UTC-4 EDT).
+    const easternOffsetMs = 4 * 3600000;
+    const easternNow = new Date(now.getTime() - easternOffsetMs);
+    const todayStart = new Date(Date.UTC(easternNow.getUTCFullYear(), easternNow.getUTCMonth(), easternNow.getUTCDate()) + easternOffsetMs).toISOString();
     const weekStart = new Date(now - 7 * 86400000).toISOString();
     const hourAgo = new Date(now - 3600000).toISOString();
 
@@ -18,11 +22,10 @@ export async function GET() {
       .gte('created_at', todayStart)
       .order('created_at', { ascending: false })
       .limit(500);
-    
-    console.log('[COST DEBUG] todayStart:', todayStart, 'now:', now.toISOString(), 'rows:', todayData?.length, 'error:', todayError?.message);
+
 
     const { data: weekData } = await sb.from('aba_memory')
-      .select('content')
+      .select('content, created_at')
       .eq('memory_type', 'cost_tracking')
       .gte('created_at', weekStart)
       .limit(2000);
@@ -44,7 +47,8 @@ export async function GET() {
         todayCacheRead += e.cache_read_input_tokens || 0;
         todayCacheCreate += e.cache_creation_input_tokens || 0;
 
-        const model = (e.model || 'unknown').replace('claude-', '').replace('-20260217', '');
+        // ⬡B:aoa.audit_fix:FIX:L2_model_date_regex:20260404⬡
+        const model = (e.model || 'unknown').replace('claude-', '').replace(/-\d{8}$/, '');
         todayByModel[model] = (todayByModel[model] || 0) + cost;
         const ch = e.channel || 'unknown';
         todayByChannel[ch] = (todayByChannel[ch] || 0) + cost;
@@ -75,19 +79,27 @@ export async function GET() {
     for (const row of (weekData || [])) {
       try {
         const e = typeof row.content === 'string' ? JSON.parse(row.content) : row.content;
-        const cost = e.cost_usd || 0;
+        // ⬡B:aoa.audit_fix:FIX:M1_weekly_both_cost_fields:20260404⬡
+        // Per-call entries have cost_usd. Daily aggregates have total_usd. Check both.
+        const cost = e.cost_usd || e.total_usd || 0;
         weekTotal += cost;
         weekCalls++;
-        const day = (e.timestamp || '').split('T')[0] || 'unknown';
+        // ⬡B:aoa.audit_fix:FIX:L3_weekly_day_both_fields:20260404⬡
+        const day = (e.timestamp || e.date || row.created_at || '').split('T')[0] || 'unknown';
         weekByDay[day] = (weekByDay[day] || 0) + cost;
       } catch (pe) {}
     }
 
-    const cacheHitRate = (todayCacheRead + todayCacheCreate) > 0
-      ? Math.round(todayCacheRead / (todayCacheRead + todayCacheCreate) * 100) : 0;
+    // ⬡B:aoa.audit_fix:FIX:M2_cache_hit_rate:20260404⬡
+    // Anthropic: input_tokens excludes cache. Total = input + cache_read + cache_create.
+    const totalRealInput = todayInput + todayCacheRead + todayCacheCreate;
+    const cacheHitRate = totalRealInput > 0
+      ? Math.round(todayCacheRead / totalRealInput * 100) : 0;
 
     const sortObj = (obj) => Object.entries(obj).sort((a,b) => b[1] - a[1]).map(([k,v]) => ({ name: k, cost: Math.round(v * 10000) / 10000 }));
-    const hourOfDay = now.getUTCHours() || 1;
+    // ⬡B:aoa.audit_fix:FIX:H7b_projection_eastern:20260404⬡ Use Eastern hour for projection
+    const easternHour = (now.getUTCHours() - 4 + 24) % 24;
+    const hourOfDay = easternHour || 1;
 
     return NextResponse.json({
       realtime: true,

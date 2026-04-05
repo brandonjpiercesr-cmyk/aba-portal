@@ -77,6 +77,24 @@ export async function GET() {
       health.elevenlabs = r.status === 401 ? 'up' : r.ok ? 'up' : 'degraded';
     } catch { health.elevenlabs = 'down'; }
 
+    // ⬡B:aoa.audit_fix:FIX:H11_gemini_openai_health:20260404⬡ Real health checks, not fake green
+    // Gemini
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=test', {
+        signal: AbortSignal.timeout(5000)
+      });
+      health.gemini = r.status === 400 || r.status === 403 ? 'up' : r.ok ? 'up' : 'degraded';
+    } catch { health.gemini = 'down'; }
+
+    // OpenAI
+    try {
+      const r = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': 'Bearer test' },
+        signal: AbortSignal.timeout(5000)
+      });
+      health.openai = r.status === 401 ? 'up' : r.ok ? 'up' : 'degraded';
+    } catch { health.openai = 'down'; }
+
     // ABAbase
     try {
       const r = await fetch(`${ABACIA_URL}/health`, { signal: AbortSignal.timeout(8000) });

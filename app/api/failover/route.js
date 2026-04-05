@@ -40,8 +40,9 @@ export async function POST(req) {
       activated_at: new Date().toISOString(),
       activated_by: 'brandon_T10_via_AOA_Portal',
       model_mapping: isNormal ? null : {
-        'claude-sonnet-4-6': provider === 'gemini' ? 'gemini-2.5-flash' : provider === 'openai' ? 'gpt-4.1' : 'llama-3.1-70b-versatile',
-        'claude-haiku-4-5-20251001': provider === 'gemini' ? 'gemini-2.5-flash' : provider === 'openai' ? 'gpt-4.1-mini' : 'llama-3.1-8b-instant',
+        // ⬡B:aoa.audit_fix:FIX:H4_openai_models:20260404⬡
+        'claude-sonnet-4-6': provider === 'gemini' ? 'gemini-2.5-flash' : provider === 'openai' ? 'gpt-4o' : 'llama-3.1-70b-versatile',
+        'claude-haiku-4-5-20251001': provider === 'gemini' ? 'gemini-2.5-flash' : provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.1-8b-instant',
       }
     };
 

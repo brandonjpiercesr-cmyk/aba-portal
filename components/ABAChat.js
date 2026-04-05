@@ -36,10 +36,21 @@ export function AuthGate({ children }) {
     return unsub;
   }, []);
 
+  // ⬡B:aoa.audit_fix:FIX:H9_iframe_auth_fallback:20260404⬡
+  const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+
   const handleSignIn = async () => {
     setError(null);
-    try { await signInWithPopup(auth, googleProvider); }
-    catch (e) { setError(e.message); }
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (e) {
+      // If popup blocked (common in iframes), offer new tab fallback
+      if (isIframe && (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request' || e.message?.includes('popup'))) {
+        setError('popup_blocked');
+      } else {
+        setError(e.message);
+      }
+    }
   };
 
   const verifyCode = async () => {
@@ -85,7 +96,16 @@ export function AuthGate({ children }) {
             className="w-full py-2.5 rounded-lg bg-purple hover:bg-purple-deep text-white text-sm font-medium transition-all">
             Sign in with Google
           </button>
-          {error && (
+          {error === 'popup_blocked' && (
+            <div className="mt-4">
+              <p className="text-xs text-yellow-400/80 mb-2">Sign-in popup was blocked inside this window.</p>
+              <a href="https://aba-portal.onrender.com" target="_blank" rel="noopener noreferrer"
+                className="block w-full py-2.5 rounded-lg border border-purple/40 text-purple text-sm font-medium text-center hover:bg-purple/10 transition-all">
+                Open AOA Portal in New Tab
+              </a>
+            </div>
+          )}
+          {error && error !== 'popup_blocked' && (
             <p className="mt-4 text-xs text-yellow-400/80">
               Hey, {error} — this area requires operator access. If you think you should have access, reach out to the team.
             </p>
@@ -147,7 +167,8 @@ export function useABAChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          user_id: 'brandon',
+          // ⬡B:aoa.audit_fix:FIX:M15_chat_user_id:20260404⬡ Use authenticated user, not hardcoded
+          user_id: auth.currentUser?.email || 'aoa_portal_user',
           channel: 'aoa_portal',
           context: { source: 'aoa_portal', admin: true }
         })

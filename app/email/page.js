@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { Card, Stat, PageTitle, Loading, Btn, Tag, Modal, Empty, friendlyDate, timeAgo } from '../../components/UI';
 
 // Code path mapping for email trace
@@ -202,8 +203,9 @@ export default function EmailPage() {
               {content?.body && (
                 <div>
                   <span className="text-[10px] text-dim block mb-1">Body</span>
+                  {/* ⬡B:aoa.audit_fix:FIX:M18_email_xss_dompurify:20260404⬡ */}
                   <div className="text-xs text-gray-300 bg-white/[0.02] rounded-lg p-3 max-h-[200px] overflow-y-auto"
-                    dangerouslySetInnerHTML={{ __html: content.body }} />
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body, { FORBID_TAGS: ['script', 'iframe', 'object', 'embed'], FORBID_ATTR: ['onerror', 'onclick', 'onload'] }) }} />
                 </div>
               )}
             </div>

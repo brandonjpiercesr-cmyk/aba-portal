@@ -30,7 +30,11 @@ export function BgProvider({ children }) {
 
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('aoa_bg') : null;
-    if (saved !== null) setBgIdx(Number(saved));
+    // ⬡B:aoa.audit_fix:FIX:M17_bg_nan_guard:20260404⬡
+    if (saved !== null) {
+      const idx = Number(saved);
+      if (!isNaN(idx) && idx >= 0 && idx < BACKGROUNDS.length) setBgIdx(idx);
+    }
   }, []);
 
   const setAndSave = (idx) => {

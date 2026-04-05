@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, PageTitle, Loading, Btn, Tag, Pill } from '../../components/UI';
+import { Card, PageTitle, Loading, Btn } from '../../components/UI';
 
 export default function CodePage() {
   const [repo, setRepo] = useState('abacia-services');

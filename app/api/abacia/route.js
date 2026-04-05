@@ -18,13 +18,11 @@ export async function POST(req) {
       return NextResponse.json({ success: r.status === 201 || r.status === 202, action: 'deploy_triggered' });
     }
 
+    // ⬡B:aoa.audit_fix:FIX:H12_remove_dead_update_env:20260404⬡
+    // Removed: update_env action did PUT to /env-vars/${key} — that endpoint doesn't exist in Render API.
+    // Working env var update is in /api/keys POST action=update (full-list PUT, 911 Rule 3).
     if (action === 'update_env') {
-      const { serviceId, key, value } = body;
-      const r = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars/${key}`, {
-        method: 'PUT', headers: { 'Authorization': `Bearer ${RENDER_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value })
-      });
-      return NextResponse.json({ success: r.status === 200, action: 'env_updated', key });
+      return NextResponse.json({ error: 'Use /api/keys with action=update for safe env var updates (911 Rule 3)' }, { status: 400 });
     }
 
     if (action === 'write_brain') {
@@ -56,7 +54,7 @@ export async function POST(req) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: body.message,
-        user_id: body.user_id || 'brandon',
+        user_id: body.user_id || 'aoa_portal_user',
         channel: 'aoa_portal',
         context: { aoa_admin: true, trust_level: 'T10', can_execute: true }
       })

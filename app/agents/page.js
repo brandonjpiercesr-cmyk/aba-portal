@@ -13,6 +13,24 @@ export default function AgentsPage() {
   const [editJD, setEditJD] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // ⬡B:aoa.audit_fix:FIX:H1b_agents_page_fetch_on_click:20260404⬡
+  // Actions load on click, not preloaded (was 103 sequential queries)
+  const [loadingActions, setLoadingActions] = useState(false);
+
+  const selectAgent = async (agent) => {
+    setSelected(agent);
+    setLoadingActions(true);
+    try {
+      const res = await fetch(`/api/agents/actions?agent=${encodeURIComponent(agent.agent_id)}`);
+      const data = await res.json();
+      // ⬡B:aoa.audit_fix:FIX:M16_no_state_mutation:20260404⬡ Don't mutate state directly
+      setSelected(prev => prev ? { ...prev, recent_actions: data.actions || [] } : null);
+    } catch {
+      setSelected(prev => prev ? { ...prev, recent_actions: [] } : null);
+    }
+    setLoadingActions(false);
+  };
+
   const saveJD = async () => {
     if (!selected || !editJD.trim()) return;
     setSaving(true);
@@ -22,7 +40,8 @@ export default function AgentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selected.id, full_description: editJD })
       });
-      selected.full_description = editJD;
+      // ⬡B:aoa.audit_fix:FIX:M16_savejd_no_mutation:20260404⬡ Immutable state update
+      setSelected(prev => prev ? { ...prev, full_description: editJD } : null);
       setEditing(false);
     } catch {}
     setSaving(false);
@@ -82,7 +101,7 @@ export default function AgentsPage() {
           <div className="space-y-0">
             {filtered.map(agent => (
               <div key={agent.id || agent.agent_id} className="border-b border-white/[0.03] last:border-0 py-2.5 px-1 cursor-pointer hover:bg-white/[0.02] transition-all"
-                onClick={() => setSelected(agent)}>
+                onClick={() => selectAgent(agent)}>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -94,14 +113,6 @@ export default function AgentsPage() {
                     <div className="flex items-center gap-2 mt-0.5">
                       {agent.department && <Pill>{agent.department}</Pill>}
                       {agent.tier && <Pill>Tier {agent.tier}</Pill>}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-dim">Last 5 actions</div>
-                    <div className="text-xs text-gray-400">
-                      {(agent.recent_actions || []).length > 0
-                        ? timeAgo((agent.recent_actions[0]?.created_at))
-                        : 'none'}
                     </div>
                   </div>
                   <span className="text-dim text-xs">▸</span>
@@ -142,7 +153,9 @@ export default function AgentsPage() {
                 )}
               </div>
             )}
-            {(selected.recent_actions || []).length > 0 && (
+            {loadingActions ? (
+              <div className="text-xs text-dim py-4 text-center">Loading actions...</div>
+            ) : (selected.recent_actions || []).length > 0 && (
               <div>
                 <span className="text-[10px] text-dim block mb-2">Recent Actions</span>
                 <div className="space-y-1.5">

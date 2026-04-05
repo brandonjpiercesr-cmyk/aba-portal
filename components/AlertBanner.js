@@ -7,14 +7,17 @@ export default function AlertBanner() {
   useEffect(() => {
     const check = async () => {
       try {
-        const [health, errors, kills] = await Promise.all([
-          fetch('/api/dashboard').then(r => r.json()).catch(() => null),
+        // ⬡B:aoa.audit_fix:FIX:M12_alert_lightweight:20260404⬡
+        // Was fetching full dashboard (9+ queries). Now uses lightweight endpoints.
+        const [keepalive, errors, kills] = await Promise.all([
+          fetch('/api/keepalive').then(r => r.json()).catch(() => null),
           fetch('/api/errors?hours=1').then(r => r.json()).catch(() => null),
           fetch('/api/killswitch').then(r => r.json()).catch(() => null),
         ]);
 
         const a = [];
-        if (health?.ababase?.status === 'down') a.push({ level: 'critical', msg: 'ABAbase is DOWN — services may not respond' });
+        const abaStatus = keepalive?.services?.['abacia-services']?.status;
+        if (abaStatus === 'down') a.push({ level: 'critical', msg: 'ABAbase is DOWN — services may not respond' });
         if ((errors?.count || 0) > 5) a.push({ level: 'error', msg: `${errors.count} errors in the last hour` });
         if ((errors?.count || 0) > 0 && (errors?.count || 0) <= 5) a.push({ level: 'warn', msg: `${errors.count} error${errors.count > 1 ? 's' : ''} in the last hour` });
 

@@ -21,20 +21,10 @@ export async function GET(req) {
     if (source !== 'memory') {
       const { data, error } = await sb.from('aba_agent_jds').select('*').order('agent_id', { ascending: true });
       if (!error && data) {
-        // Auto-load last 5 actions for EVERY agent
-        for (const agent of data) {
-          const tag = agent.agent_id.toLowerCase();
-          try {
-            const { data: actions } = await sb.from('aba_memory')
-              .select('id, source, memory_type, content, created_at')
-              .or(`tags.cs.{${tag}},source.ilike.%${tag}%`)
-              .not('memory_type', 'in', '(aba_agents,agent_jd)')
-              .order('created_at', { ascending: false })
-              .limit(5);
-            agent.recent_actions = actions || [];
-          } catch { agent.recent_actions = []; }
-        }
-        results.table_agents = data;
+        // ⬡B:aoa.audit_fix:FIX:H1_agents_remove_n1_query:20260404⬡
+        // Was: 103 sequential queries loading last 5 actions for every agent (2+ seconds).
+        // Now: roster loads with 1 query. Actions load on agent click via ?id= or /actions endpoint.
+        results.table_agents = data.map(a => ({ ...a, recent_actions: [] }));
       }
     }
 

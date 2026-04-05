@@ -10,16 +10,29 @@ export async function GET() {
     const since24h = new Date(Date.now() - 86400000).toISOString();
     const since1h = new Date(Date.now() - 3600000).toISOString();
 
-    const [brainTotal, brain24h, brain1h, errors24h, emails24h, agents, tasteBatches, trainingNotes, omiTranscripts] = await Promise.all([
+    // ⬡B:aoa.audit_fix:FIX:M3_health_parallel:20260404⬡ Health runs in parallel, not after queries
+    const healthCheck = async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const r = await fetch(`${ABACIA_URL}/health`, { signal: AbortSignal.timeout(8000) });
+          if (r.ok) return 'up';
+        } catch {}
+        if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+      }
+      return 'down';
+    };
+
+    const [brainTotal, brain24h, brain1h, errors24h, emails24h, agents, tasteBatches, trainingNotes, omiTranscripts, ababaseStatus] = await Promise.all([
       sb.from('aba_memory').select('id', { count: 'estimated', head: true }),
       sb.from('aba_memory').select('id', { count: 'exact', head: true }).gte('created_at', since24h),
       sb.from('aba_memory').select('id', { count: 'exact', head: true }).gte('created_at', since1h),
       sb.from('aba_memory').select('id', { count: 'exact', head: true }).or('memory_type.ilike.%error%,source.ilike.%error%').gte('created_at', since24h),
-      sb.from('aba_memory').select('id', { count: 'exact', head: true }).eq('memory_type', 'email_dedup').gte('created_at', since24h),
+      sb.from('aba_memory').select('id', { count: 'exact', head: true }).or('memory_type.eq.email_dedup,memory_type.eq.email_sent').gte('created_at', since24h),
       sb.from('aba_agent_jds').select('id', { count: 'exact', head: true }),
       sb.from('aba_memory').select('id', { count: 'exact', head: true }).eq('memory_type', 'taste_batch_summary').gte('created_at', since24h),
       sb.from('aba_memory').select('id', { count: 'exact', head: true }).eq('memory_type', 'ccwa_training_note'),
       sb.from('aba_memory').select('id', { count: 'exact', head: true }).eq('memory_type', 'omi_transcript').gte('created_at', since24h),
+      healthCheck(),
     ]);
 
     // If estimated count fails, try a direct RPC count
@@ -35,16 +48,6 @@ export async function GET() {
       }
     }
 
-    // ABAbase health with retry
-    let ababaseHealth = 'unknown';
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const r = await fetch(`${ABACIA_URL}/health`, { signal: AbortSignal.timeout(8000) });
-        if (r.ok) { ababaseHealth = 'up'; break; }
-      } catch {}
-      if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
-    }
-    if (ababaseHealth === 'unknown') ababaseHealth = 'down';
 
     return NextResponse.json({
       brain: { total: totalBrain, last24h: brain24h.count, lastHour: brain1h.count },
@@ -54,7 +57,7 @@ export async function GET() {
       taste: { batchesLast24h: tasteBatches.count },
       training: { totalNotes: trainingNotes.count },
       omi: { transcriptsLast24h: omiTranscripts.count },
-      ababase: { status: ababaseHealth },
+      ababase: { status: ababaseStatus },
       ts: new Date().toISOString()
     });
   } catch (err) {

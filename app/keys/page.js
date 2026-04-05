@@ -5,7 +5,7 @@ import { Card, Stat, PageTitle, Loading, Btn, Tag, Modal, Empty, friendlyDate } 
 const PROVIDERS = {
   anthropic: { name: 'Anthropic (Claude)', color: 'text-purple', bg: 'bg-purple/20', infra: 'AWS', models: 'Sonnet 4, Haiku 4.5' },
   gemini: { name: 'Google (Gemini)', color: 'text-blue-400', bg: 'bg-blue-400/20', infra: 'GCP', models: 'Gemini 2.5 Flash' },
-  openai: { name: 'OpenAI (GPT)', color: 'text-green-400', bg: 'bg-green-400/20', infra: 'Azure', models: 'GPT-4.1, GPT-4.1-mini' },
+  openai: { name: 'OpenAI (GPT)', color: 'text-green-400', bg: 'bg-green-400/20', infra: 'Azure', models: 'GPT-4o, GPT-4o-mini' },
   groq: { name: 'Groq (Llama)', color: 'text-orange-400', bg: 'bg-orange-400/20', infra: 'Independent', models: 'Llama 3.1 70B, 8B' },
 };
 
@@ -117,7 +117,7 @@ export default function KeysPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Object.entries(PROVIDERS).map(([key, prov]) => {
             const isActive = currentProvider === key;
-            const isUp = h[key] === 'up' || (key === 'gemini' && h[key] !== 'down') || (key === 'openai' && h[key] !== 'down');
+            const isUp = h[key] === 'up';
             return (
               <button key={key} onClick={() => !switching && switchProvider(key)} disabled={switching || isActive}
                 className={`p-4 rounded-xl border-2 transition-all text-left ${
@@ -203,7 +203,7 @@ export default function KeysPage() {
             </div>
             <div>
               <label className="text-[10px] text-dim block mb-1">New key value</label>
-              <input type="text" value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="Paste new key here..." className="font-mono text-xs" />
+              <input type="password" value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="Paste new key here..." className="font-mono text-xs" />
             </div>
             <div className="flex gap-2 flex-wrap">
               {editModal.key === 'ANTHROPIC_API_KEY' && (

@@ -31,7 +31,7 @@ export default function CostPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Stat value={t.input_tokens?.toLocaleString() ?? '—'} label="Input Tokens" />
         <Stat value={t.output_tokens?.toLocaleString() ?? '—'} label="Output Tokens" />
-        <Stat value={t.cache_hit_rate ?? '—'} label="Cache Hit Rate" color="text-green-400" />
+        <Stat value={t.cache_hit_rate != null ? t.cache_hit_rate + '%' : '—'} label="Cache Hit Rate" color="text-green-400" />
         <Stat value={t.cache_read?.toLocaleString() ?? '—'} label="Cache Read" color="text-cyan-400" />
       </div>
 
@@ -42,7 +42,7 @@ export default function CostPage() {
               {t.by_model.map(m => (
                 <div key={m.name} className="flex justify-between items-center">
                   <span className="text-xs text-gray-300">{m.name}</span>
-                  <span className="text-xs text-yellow-400 font-mono">${m.cost.toFixed(4)}</span>
+                  <span className="text-xs text-yellow-400 font-mono">${(m.cost || 0).toFixed(4)}</span>
                 </div>
               ))}
             </div>
@@ -55,7 +55,7 @@ export default function CostPage() {
               {t.by_channel.map(c => (
                 <div key={c.name} className="flex justify-between items-center">
                   <span className="text-xs text-gray-300">{c.name}</span>
-                  <span className="text-xs text-yellow-400 font-mono">${c.cost.toFixed(4)}</span>
+                  <span className="text-xs text-yellow-400 font-mono">${(c.cost || 0).toFixed(4)}</span>
                 </div>
               ))}
             </div>
@@ -68,7 +68,7 @@ export default function CostPage() {
               {(t.by_call_type || t.by_type).map(c => (
                 <div key={c.name} className="flex justify-between items-center">
                   <span className="text-xs text-gray-300">{c.name}</span>
-                  <span className="text-xs text-yellow-400 font-mono">${c.cost.toFixed(4)}</span>
+                  <span className="text-xs text-yellow-400 font-mono">${(c.cost || 0).toFixed(4)}</span>
                 </div>
               ))}
             </div>
@@ -86,7 +86,7 @@ export default function CostPage() {
                   <td className="text-dim">{friendlyTime(c.time)}</td>
                   <td><Tag variant="info">{c.model?.replace('claude-', '')}</Tag></td>
                   <td className="text-gray-300">{c.channel}</td>
-                  <td className="text-gray-400 font-mono">{(c.input + c.output)?.toLocaleString()}</td>
+                  <td className="text-gray-400 font-mono">{((c.input || 0) + (c.output || 0)).toLocaleString()}</td>
                   <td className="text-yellow-400 font-mono">${c.cost?.toFixed(4) ?? '—'}</td>
                 </tr>
               ))}
