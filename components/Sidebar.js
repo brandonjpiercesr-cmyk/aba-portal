@@ -34,6 +34,10 @@ const NAV = [
     { href: '/services', label: 'Services', icon: '◧' },
     { href: '/errors', label: 'Error Log', icon: '◬' },
   ]},
+  { group: 'Security', items: [
+    { href: '/access', label: 'Access Control', icon: '🔒' },
+    { href: '/watchman', label: 'WATCHMAN Log', icon: '👁' },
+  ]},
   { group: 'ABA', items: [
     { href: '/chat', label: 'ABA Chat', icon: '⬡' },
   ]},
