@@ -60,9 +60,12 @@ export default function AgentsPage() {
   const auditStatuses = [...new Set(agents.map(a => a.audit_status).filter(Boolean))].sort();
 
   let filtered = agents;
+  // ⬡B:aoa.agents:FIX:search_full_name:20260416⬡
+  // agent_name column does not exist in aba_agent_jds. Real column is full_name.
   if (search) filtered = filtered.filter(a =>
-    (a.agent_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (a.agent_id || '').toLowerCase().includes(search.toLowerCase())
+    (a.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (a.agent_id || '').toLowerCase().includes(search.toLowerCase()) ||
+    (a.tagline || '').toLowerCase().includes(search.toLowerCase())
   );
   if (deptFilter) filtered = filtered.filter(a => a.department === deptFilter);
   if (auditFilter) filtered = filtered.filter(a => a.audit_status === auditFilter);
@@ -105,7 +108,7 @@ export default function AgentsPage() {
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-white font-medium">{agent.agent_name || agent.agent_id}</span>
+                      <span className="text-sm text-white font-medium">{agent.full_name || agent.agent_id}</span>
                       <Tag variant={agent.audit_status === 'audited' ? 'ok' : agent.audit_status === 'needs_real_audit' ? 'warn' : 'dim'}>
                         {agent.audit_status || 'unknown'}
                       </Tag>
@@ -123,7 +126,7 @@ export default function AgentsPage() {
         )}
       </Card>
 
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.agent_name || 'Agent'} wide>
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.full_name || selected?.agent_id || 'Agent'} wide>
         {selected && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
