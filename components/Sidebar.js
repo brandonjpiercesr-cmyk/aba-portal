@@ -27,6 +27,7 @@ const NAV = [
   ]},
   { group: 'Workforce', items: [
     { href: '/awa', label: 'AWA Jobs', icon: '◓' },
+    { href: '/layered', label: 'LAYERED', icon: '◔' },
   ]},
   { group: 'Infrastructure', items: [
     { href: '/shadow', label: 'SHADOW Oversight', icon: '◔' },
