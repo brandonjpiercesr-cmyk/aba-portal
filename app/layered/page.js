@@ -18,6 +18,10 @@ import { Card, Stat, PageTitle, Loading, Btn, Tag, Modal, Empty, friendlyDate, t
 
 // LAYERED's 7 layers, in canonical order (per We Are Layered to the Core master v2)
 const LAYER_ORDER = ['identity', 'awareness', 'yielding', 'engagement', 'resilience', 'ethics', 'devotion'];
+// ⬡B:aoa.layered_dashboard:FIX:core_signals_quadrants:20260425⬡
+// LAYERED's 4 core signal quadrants from the actual grading engine output
+// (verified via live data 2026-04-25). Each scored 1-10.
+const CORE_SIGNAL_ORDER = ['controller', 'operator', 'regulator', 'enforcer'];
 
 function scoreColor(s) {
   if (s == null) return 'dim';
@@ -147,14 +151,24 @@ export default function LayeredPage() {
         </div>
       )}
 
-      {overview && overview.layerAverages && Object.keys(overview.layerAverages).length > 0 && (
-        <Card title="Cohort Layer Averages" className="mb-4">
-          <div className="space-y-1.5">
-            {LAYER_ORDER.filter(l => l in overview.layerAverages).map(l =>
-              <LayerBar key={l} name={l} score={overview.layerAverages[l]} />
-            )}
-          </div>
-        </Card>
+      {overview && (overview.signalAverages || overview.layerAverages) && (
+        Object.keys(overview.signalAverages || {}).length > 0 ? (
+          <Card title="Cohort Core Signal Averages (Controller / Operator / Regulator / Enforcer)" className="mb-4">
+            <div className="space-y-1.5">
+              {CORE_SIGNAL_ORDER.filter(l => l in overview.signalAverages).map(l =>
+                <LayerBar key={l} name={l} score={overview.signalAverages[l]} />
+              )}
+            </div>
+          </Card>
+        ) : Object.keys(overview.layerAverages || {}).length > 0 ? (
+          <Card title="Cohort Layer Averages" className="mb-4">
+            <div className="space-y-1.5">
+              {LAYER_ORDER.filter(l => l in overview.layerAverages).map(l =>
+                <LayerBar key={l} name={l} score={overview.layerAverages[l]} />
+              )}
+            </div>
+          </Card>
+        ) : null
       )}
 
       <div className="flex gap-2 mb-3">
@@ -250,7 +264,19 @@ export default function LayeredPage() {
               <div><span className="text-dim">Last Activity:</span> <span className="text-gray-200">{studentDetail.progress.lastActivity ? friendlyDate(studentDetail.progress.lastActivity) : '—'}</span></div>
             </div>
 
-            {/* Cumulative Layer Profile */}
+            {/* Cumulative Profile — show core_signals (current shape), fall back to layers */}
+            {studentDetail.profile.signals && Object.keys(studentDetail.profile.signals).length > 0 && (
+              <Card title="Cumulative Core Signals">
+                <div className="space-y-1.5">
+                  {CORE_SIGNAL_ORDER.filter(l => l in studentDetail.profile.signals).map(l =>
+                    <LayerBar key={l} name={l} score={studentDetail.profile.signals[l]} />
+                  )}
+                </div>
+                {studentDetail.profile.updatedAt && (
+                  <div className="text-[10px] text-dim mt-2">Updated {timeAgo(studentDetail.profile.updatedAt)}</div>
+                )}
+              </Card>
+            )}
             {studentDetail.profile.layers && Object.keys(studentDetail.profile.layers).length > 0 && (
               <Card title="Cumulative Layer Profile">
                 <div className="space-y-1.5">
@@ -258,9 +284,6 @@ export default function LayeredPage() {
                     <LayerBar key={l} name={l} score={studentDetail.profile.layers[l]} />
                   )}
                 </div>
-                {studentDetail.profile.updatedAt && (
-                  <div className="text-[10px] text-dim mt-2">Updated {timeAgo(studentDetail.profile.updatedAt)}</div>
-                )}
               </Card>
             )}
 
@@ -288,8 +311,17 @@ export default function LayeredPage() {
                       {a.summary && (
                         <div className="text-xs text-gray-300 mb-2 italic">{a.summary}</div>
                       )}
+                      {a.signals && Object.keys(a.signals).length > 0 && (
+                        <div className="space-y-1 mb-2">
+                          <div className="text-[10px] uppercase tracking-wider text-dim mb-1">Core Signals</div>
+                          {CORE_SIGNAL_ORDER.filter(l => l in a.signals).map(l =>
+                            <LayerBar key={l} name={l} score={a.signals[l]} />
+                          )}
+                        </div>
+                      )}
                       {a.layers && Object.keys(a.layers).length > 0 && (
                         <div className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-dim mb-1">Layers</div>
                           {LAYER_ORDER.filter(l => l in a.layers).map(l =>
                             <LayerBar key={l} name={l} score={a.layers[l]} />
                           )}

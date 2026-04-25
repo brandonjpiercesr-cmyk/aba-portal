@@ -28,12 +28,21 @@ function safeJson(content) {
 }
 
 // Compute a single composite score from a layered assessment.
-// LAYERED has 7 layers (each scored 1-10): identity, awareness, yielding,
-// engagement, resilience, ethics, devotion. We average them.
+// ⬡B:aoa.layered_dashboard:FIX:composite_uses_core_signals_not_layers:20260425⬡
+// Live data on 2026-04-25 revealed the actual assessment shape uses
+// core_signals (controller/operator/regulator/enforcer — 4 quadrants from the
+// LAYERED master spec) NOT a 7-layer scores object. The grading engine in
+// abacia-services routes/gmgu-routes.js calls these "core_signals" in the JSON
+// it persists. Compute composite from core_signals first, fall back to layers
+// or layer_scores if a future schema change adds them.
 function compositeScore(assessment) {
   if (!assessment || typeof assessment !== 'object') return null;
-  const layers = assessment.layers || assessment.layer_scores || {};
-  const vals = Object.values(layers).filter(v => typeof v === 'number');
+  const signals = assessment.core_signals || assessment.signals || null;
+  const layers = assessment.layers || assessment.layer_scores || null;
+  // Prefer core_signals (current shape). Fall back to layers if present.
+  const source = (signals && Object.keys(signals).length > 0) ? signals : layers;
+  if (!source) return null;
+  const vals = Object.values(source).filter(v => typeof v === 'number');
   if (vals.length === 0) return null;
   return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
 }
@@ -83,6 +92,8 @@ export async function GET(req) {
         const c = safeJson(row.content);
         byEmail[email] = byEmail[email] || { email };
         byEmail[email].profileScore = compositeScore(c);
+        // ⬡B:aoa.layered_dashboard:FIX:roster_uses_core_signals_not_layers:20260425⬡
+        byEmail[email].signalScores = c.core_signals || c.signals || null;
         byEmail[email].layerScores = c.layers || c.layer_scores || null;
         byEmail[email].profileUpdatedAt = row.created_at;
       }
@@ -160,6 +171,8 @@ export async function GET(req) {
         },
         profile: {
           composite: compositeScore(profile),
+          // ⬡B:aoa.layered_dashboard:FIX:student_profile_signals:20260425⬡
+          signals: profile.core_signals || profile.signals || {},
           layers: profile.layers || profile.layer_scores || {},
           updatedAt: (profRes.data && profRes.data[0]) ? profRes.data[0].created_at : null,
         },
@@ -170,16 +183,28 @@ export async function GET(req) {
 
     if (action === 'overview') {
       // Cohort-wide averages across all layered_profile rows.
+      // ⬡B:aoa.layered_dashboard:FIX:overview_uses_core_signals_not_layers:20260425⬡
+      // Live data shape uses core_signals (4 quadrants: controller, operator,
+      // regulator, enforcer). Aggregate those. Layers fallback retained for
+      // future schema additions.
       const { data } = await sb.from('aba_memory')
         .select('content')
         .like('source', 'layered_profile.%')
         .limit(500);
 
+      const signalSums = {};
+      const signalCounts = {};
       const layerSums = {};
       const layerCounts = {};
       let composites = [];
       for (const row of (data || [])) {
         const c = safeJson(row.content);
+        const signals = c.core_signals || c.signals || {};
+        for (const [k, v] of Object.entries(signals)) {
+          if (typeof v !== 'number') continue;
+          signalSums[k] = (signalSums[k] || 0) + v;
+          signalCounts[k] = (signalCounts[k] || 0) + 1;
+        }
         const layers = c.layers || c.layer_scores || {};
         for (const [k, v] of Object.entries(layers)) {
           if (typeof v !== 'number') continue;
@@ -190,6 +215,10 @@ export async function GET(req) {
         if (comp != null) composites.push(comp);
       }
 
+      const signalAverages = {};
+      for (const k in signalSums) {
+        signalAverages[k] = Math.round((signalSums[k] / signalCounts[k]) * 10) / 10;
+      }
       const layerAverages = {};
       for (const k in layerSums) {
         layerAverages[k] = Math.round((layerSums[k] / layerCounts[k]) * 10) / 10;
@@ -201,6 +230,7 @@ export async function GET(req) {
       return NextResponse.json({
         cohortComposite,
         studentsWithProfile: composites.length,
+        signalAverages,
         layerAverages,
       });
     }
