@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
-import { VERCEL_TOKEN } from '../../../lib/config';
+import { vercelToken } from '../../../lib/config';
 
 export async function GET(req) {
   try {
@@ -11,7 +11,7 @@ export async function GET(req) {
 
     if (action === 'deployments' && projectId) {
       const r = await fetch(`https://api.vercel.com/v6/deployments?projectId=${projectId}&limit=5`, {
-        headers: { 'Authorization': `Bearer ${VERCEL_TOKEN}` }
+        headers: { 'Authorization': `Bearer ${vercelToken()}` }
       });
       const data = await r.json();
       return NextResponse.json({ deployments: data.deployments || [] });
@@ -19,7 +19,7 @@ export async function GET(req) {
 
     // Pull ALL Vercel projects
     const r = await fetch('https://api.vercel.com/v9/projects?limit=50', {
-      headers: { 'Authorization': `Bearer ${VERCEL_TOKEN}` }
+      headers: { 'Authorization': `Bearer ${vercelToken()}` }
     });
     const data = await r.json();
     const projects = (data.projects || []).map(p => {

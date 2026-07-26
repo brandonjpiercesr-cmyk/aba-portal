@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
-import { NYLAS_KEY, NYLAS_GRANTS } from '../../../lib/config';
+import { nylasKey, nylasGrants } from '../../../lib/config';
 import { getSupabase } from '../../../lib/supabase';
 
 export async function GET(req) {
@@ -13,8 +13,8 @@ export async function GET(req) {
     const since = Math.floor(Date.now() / 1000) - (hours * 3600);
 
     const grantsToQuery = grantFilter === 'all'
-      ? Object.entries(NYLAS_GRANTS)
-      : [[grantFilter, NYLAS_GRANTS[grantFilter]]];
+      ? Object.entries(nylasGrants())
+      : [[grantFilter, nylasGrants()[grantFilter]]];
 
     const results = [];
 
@@ -55,7 +55,7 @@ export async function GET(req) {
       const grantLabel = typeof grant === 'object' ? grant.label : name;
       try {
         const r = await fetch(`https://api.us.nylas.com/v3/grants/${grantId}/messages?in=SENT&received_after=${since}&limit=50`, {
-          headers: { 'Authorization': `Bearer ${NYLAS_KEY}`, 'Accept': 'application/json' }
+          headers: { 'Authorization': `Bearer ${nylasKey()}`, 'Accept': 'application/json' }
         });
         const json = await r.json();
         for (const m of (json.data || [])) {

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
-import { ABACIA_URL, RENDER_KEY } from '../../../lib/config';
+import { ABACIA_URL, renderKey } from '../../../lib/config';
 import { getSupabase } from '../../../lib/supabase';
 
 export async function POST(req) {
@@ -13,7 +13,7 @@ export async function POST(req) {
     if (action === 'deploy') {
       const serviceId = body.serviceId;
       const r = await fetch(`https://api.render.com/v1/services/${serviceId}/deploys`, {
-        method: 'POST', headers: { 'Authorization': `Bearer ${RENDER_KEY}`, 'Content-Type': 'application/json' }, body: '{}'
+        method: 'POST', headers: { 'Authorization': `Bearer ${renderKey()}`, 'Content-Type': 'application/json' }, body: '{}'
       });
       return NextResponse.json({ success: r.status === 201 || r.status === 202, action: 'deploy_triggered' });
     }

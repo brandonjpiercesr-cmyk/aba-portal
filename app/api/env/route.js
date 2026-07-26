@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
-import { RENDER_KEY } from '../../../lib/config';
+import { renderKey } from '../../../lib/config';
 
 export async function GET(req) {
   try {
@@ -9,7 +9,7 @@ export async function GET(req) {
     const serviceId = searchParams.get('service');
     if (!serviceId) return NextResponse.json({ error: 'service ID required' }, { status: 400 });
     const r = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars`, {
-      headers: { 'Authorization': `Bearer ${RENDER_KEY}` }
+      headers: { 'Authorization': `Bearer ${renderKey()}` }
     });
     const data = await r.json();
     const masked = (data || []).map(e => {
@@ -27,7 +27,7 @@ export async function PUT(req) {
     const body = await req.json();
     const { serviceId, key, value } = body;
     const r = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars/${key}`, {
-      method: 'PUT', headers: { 'Authorization': `Bearer ${RENDER_KEY}`, 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Authorization': `Bearer ${renderKey()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ value })
     });
     return NextResponse.json({ updated: r.status === 200, key });
