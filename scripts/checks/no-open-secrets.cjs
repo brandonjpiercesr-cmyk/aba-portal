@@ -35,8 +35,11 @@ const SCAN_EXT = /\.(js|cjs|mjs|jsx|ts|tsx|json|yml|yaml|html|py|sh|md|txt|env)$
 // A real secrets file, as opposed to the shape-only template every repo should ship.
 const ENV_TRACKED_RE = /(^|\/)\.env($|\.(?!example$|sample$|template$)[A-Za-z0-9_.-]+$)/;
 
-function isGuardItself(rel) {
-  return rel.indexOf('scripts/checks/no-open-secrets.cjs') !== -1;
+function isGuardItself(rel, full) {
+  // Match by real path, not by expected location, so a copy of the guard run from anywhere still
+  // skips itself instead of reporting its own pattern table as a pile of secrets.
+  if (full && path.resolve(full) === path.resolve(__filename)) return true;
+  return /(^|\/)no-open-secrets\.(js|cjs|mjs)$/.test(rel);
 }
 
 function isTemplateFile(rel) {
@@ -46,8 +49,8 @@ function isTemplateFile(rel) {
   return false;
 }
 
-function isSkippedForLiterals(rel) {
-  if (isGuardItself(rel)) return true;
+function isSkippedForLiterals(rel, full) {
+  if (isGuardItself(rel, full)) return true;
   if (isTemplateFile(rel)) return true;
   if (/(^|\/)package-lock\.json$/.test(rel)) return true;
   if (/(^|\/)yarn\.lock$/.test(rel)) return true;
@@ -158,32 +161,38 @@ function checkTrackedEnv(findings) {
 
 function scanFile(full, findings) {
   const rel = path.relative(ROOT, full).split(path.sep).join('/');
-  if (isSkippedForLiterals(rel)) return;
+  if (isSkippedForLiterals(rel, full)) return;
   let text;
   try { text = fs.readFileSync(full, 'utf8'); } catch (e) { return; }
   if (text.indexOf('\0') !== -1) return;
-  const lines = text.split('\n');
 
-  const hasWildcardCors = WILDCARD_CORS_RE.test(text);
-  let corsEnvNames = [];
+  // Every check below runs on the CODE portion of a line only. A comment that documents a bad
+  // shape, which is what a fix commit and a guard's own notes are full of, must never fail a build.
+  const lines = text.split('\n');
+  const code = lines.map(function (line) {
+    const at = commentAt(line);
+    return at === -1 ? line : line.slice(0, at);
+  });
+  const codeText = code.join('\n');
+
+  const hasWildcardCors = WILDCARD_CORS_RE.test(codeText);
+  const corsEnvNames = [];
   if (hasWildcardCors) {
     let m;
     SECRETISH_ENV_RE.lastIndex = 0;
-    while ((m = SECRETISH_ENV_RE.exec(text))) {
+    while ((m = SECRETISH_ENV_RE.exec(codeText))) {
       if (corsEnvNames.indexOf(m[1]) === -1) corsEnvNames.push(m[1]);
     }
   }
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    const comment = commentAt(line);
+  for (let i = 0; i < code.length; i++) {
+    const line = code[i];
+    if (!line) continue;
 
     for (const p of SECRET_PATTERNS) {
       p.re.lastIndex = 0;
       let m;
       while ((m = p.re.exec(line))) {
-        if (comment !== -1 && m.index > comment) continue;
         findings.push({ rel: rel, line: i + 1, type: 'secret_literal:' + p.id, detail: mask(m[0], 4) });
       }
     }
@@ -191,7 +200,6 @@ function scanFile(full, findings) {
     ENV_OR_LITERAL_RE.lastIndex = 0;
     let d;
     while ((d = ENV_OR_LITERAL_RE.exec(line))) {
-      if (comment !== -1 && d.index > comment) continue;
       findings.push({
         rel: rel,
         line: i + 1,
@@ -214,11 +222,21 @@ function scanFile(full, findings) {
 function main() {
   const findings = [];
   checkTrackedEnv(findings);
-  const files = walk(ROOT, []);
+
+  // Only TRACKED files are scanned for literals. A developer's own untracked, gitignored .env
+  // holding real values is exactly where those values belong; failing a build over it would teach
+  // people to disable the gate. What this guard polices is what gets COMMITTED. The tracked-.env
+  // check above is what catches a secrets file that should never have been added in the first place.
+  const tracked = trackedFiles();
+  const trackedSet = tracked === null ? null : new Set(tracked);
+  const files = walk(ROOT, []).filter(function (full) {
+    if (trackedSet === null) return true;
+    return trackedSet.has(path.relative(ROOT, full).split(path.sep).join('/'));
+  });
   for (const f of files) scanFile(f, findings);
 
   if (!findings.length) {
-    console.log('[no-open-secrets] clean: no tracked .env, no secret literal, no open relay, no credential default (' + files.length + ' files scanned in ' + ROOT + ').');
+    console.log('[no-open-secrets] clean: no tracked .env, no secret literal, no open relay, no credential default (' + files.length + ' tracked files scanned in ' + ROOT + ').');
     process.exit(process.exitCode || 0);
   }
 
