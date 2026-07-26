@@ -9,3 +9,40 @@ services:
         value: production
       - key: PORT
         value: "4400"
+      # ⬡B:render.env:GUARD:required_env_declared_never_defaulted:20260726⬡
+      # CLAIR FIX01 HOLE-3. These used to be live credentials written as literal defaults in
+      # lib/config.js and lib/firebase.js, so this service ran even with nothing configured. They
+      # are required env reads now and the app throws by name if one is missing. sync:false means
+      # Render prompts for the value and never stores it in this file. See .env.example.
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_ABACIA_URL
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_DATABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
+      - key: NEXT_PUBLIC_ADMIN_EMAILS
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: NYLAS_API_KEY
+        sync: false
+      - key: RENDER_API_KEY
+        sync: false
+      - key: VERCEL_TOKEN
+        sync: false
+      - key: NYLAS_GRANTS_JSON
+        sync: false

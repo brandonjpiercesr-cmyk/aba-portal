@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
-import { RENDER_KEY } from '../../../lib/config';
+import { renderKey } from '../../../lib/config';
 
 export async function GET(req) {
   try {
@@ -11,14 +11,14 @@ export async function GET(req) {
 
     if (action === 'deploys' && serviceId) {
       const r = await fetch(`https://api.render.com/v1/services/${serviceId}/deploys?limit=10`, {
-        headers: { 'Authorization': `Bearer ${RENDER_KEY}` }
+        headers: { 'Authorization': `Bearer ${renderKey()}` }
       });
       return NextResponse.json({ deploys: await r.json() });
     }
 
     if (action === 'env' && serviceId) {
       const r = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars`, {
-        headers: { 'Authorization': `Bearer ${RENDER_KEY}` }
+        headers: { 'Authorization': `Bearer ${renderKey()}` }
       });
       const data = await r.json();
       const masked = (data || []).map(e => {
@@ -30,7 +30,7 @@ export async function GET(req) {
 
     // Pull ALL services dynamically from Render API
     const r = await fetch('https://api.render.com/v1/services?limit=50', {
-      headers: { 'Authorization': `Bearer ${RENDER_KEY}` }
+      headers: { 'Authorization': `Bearer ${renderKey()}` }
     });
     const raw = await r.json();
     const services = (raw || []).map(item => {
@@ -56,7 +56,7 @@ export async function POST(req) {
     const serviceId = body.service;
     if (!serviceId) return NextResponse.json({ error: 'service ID required' }, { status: 400 });
     const r = await fetch(`https://api.render.com/v1/services/${serviceId}/deploys`, {
-      method: 'POST', headers: { 'Authorization': `Bearer ${RENDER_KEY}`, 'Content-Type': 'application/json' }, body: '{}'
+      method: 'POST', headers: { 'Authorization': `Bearer ${renderKey()}`, 'Content-Type': 'application/json' }, body: '{}'
     });
     return NextResponse.json({ triggered: r.status === 201 || r.status === 202 });
   } catch (err) {

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
-import { RENDER_KEY, ABACIA_URL } from '../../../lib/config';
+import { renderKey, ABACIA_URL } from '../../../lib/config';
 
 const SERVICES = {
   'abacia-services': 'srv-d67ucj3nv86c73e333e0',
@@ -26,7 +26,7 @@ export async function GET() {
     const results = {};
     for (const [name, id] of Object.entries(SERVICES)) {
       const r = await fetch(`https://api.render.com/v1/services/${id}/env-vars`, {
-        headers: { 'Authorization': `Bearer ${RENDER_KEY}` }
+        headers: { 'Authorization': `Bearer ${renderKey()}` }
       });
       const data = await r.json();
       const vars = {};
@@ -127,7 +127,7 @@ export async function POST(req) {
 
       // SAFE UPDATE: Pull all vars, modify one, PUT full list back (911 RULE 3)
       const getRes = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars`, {
-        headers: { 'Authorization': `Bearer ${RENDER_KEY}` }
+        headers: { 'Authorization': `Bearer ${renderKey()}` }
       });
       const allVars = await getRes.json();
       const varList = (allVars || []).map(item => {
@@ -142,7 +142,7 @@ export async function POST(req) {
 
       const putRes = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${RENDER_KEY}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${renderKey()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(varList)
       });
 

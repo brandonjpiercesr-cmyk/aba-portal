@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
-import { ABACIA_URL, RENDER_KEY } from '../../../lib/config';
+import { ABACIA_URL, renderKey } from '../../../lib/config';
 import { getSupabase } from '../../../lib/supabase';
 
 export async function GET() {
@@ -23,7 +23,7 @@ export async function GET() {
 
     // 3. Render services health
     try {
-      const r = await fetch('https://api.render.com/v1/services?limit=20', { headers: { 'Authorization': `Bearer ${RENDER_KEY}` } });
+      const r = await fetch('https://api.render.com/v1/services?limit=20', { headers: { 'Authorization': `Bearer ${renderKey()}` } });
       const data = await r.json();
       const svcs = (data || []).map(i => i.service || i);
       checks.render = {
