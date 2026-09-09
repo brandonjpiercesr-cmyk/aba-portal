@@ -26,8 +26,14 @@ const STATIC_FILES = Object.freeze({
   '/assets/app.js': ['app.js', 'text/javascript; charset=utf-8'],
 });
 
+const ENTRY_FILES = Object.freeze({
+  '/enter': ['entry.html', 'text/html; charset=utf-8'],
+  '/assets/entry.css': ['entry.css', 'text/css; charset=utf-8'],
+  '/assets/entry.js': ['entry.js', 'text/javascript; charset=utf-8'],
+});
+
 function text(value) {
-  return typeof value === 'string' && value.trim().length > 0 && value.length <= 20_000;
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function receipt(value) {
@@ -47,11 +53,11 @@ function exactKeys(record, keys) {
 }
 
 export function validateArtifact(candidate, expectedRecipient = 'Dr. Eric') {
-  if (!exactKeys(candidate, ['schema', 'state', 'recipient', 'title', 'issued_at', 'provenance', 'sections'])) {
+  if (!exactKeys(candidate, ['schema', 'state', 'recipient', 'byline', 'title', 'issued_at', 'provenance', 'sections'])) {
     return undefined;
   }
   if (candidate.schema !== 'tryaba.private-delivery.v1' || candidate.state !== 'ready'
-    || candidate.recipient !== expectedRecipient || !text(candidate.title)
+    || candidate.recipient !== expectedRecipient || !text(candidate.byline) || !text(candidate.title)
     || Number.isNaN(Date.parse(candidate.issued_at))) return undefined;
 
   if (!exactKeys(candidate.provenance, [
@@ -71,7 +77,7 @@ export function validateArtifact(candidate, expectedRecipient = 'Dr. Eric') {
     return undefined;
   }
 
-  if (!Array.isArray(candidate.sections) || candidate.sections.length < 1 || candidate.sections.length > 24) {
+  if (!Array.isArray(candidate.sections) || candidate.sections.length < 1) {
     return undefined;
   }
   const sections = [];
@@ -84,6 +90,7 @@ export function validateArtifact(candidate, expectedRecipient = 'Dr. Eric') {
     schema: candidate.schema,
     state: candidate.state,
     recipient: candidate.recipient,
+    byline: candidate.byline,
     title: candidate.title,
     issued_at: new Date(candidate.issued_at).toISOString(),
     provenance: Object.freeze({ ...candidate.provenance }),
@@ -124,7 +131,7 @@ export function readArtifact(environment = process.env) {
     return Object.freeze({ ok: false, code: 'ARTIFACT_AUTHORITY_REFUSED' });
   }
 
-  return Object.freeze({ ok: true, artifact });
+  return Object.freeze({ ok: false, code: 'ARTIFACT_AUTHORITY_NOT_CONNECTED' });
 }
 
 function digest(value) {
@@ -153,6 +160,13 @@ function authorized(request, accessToken) {
   return safeEqual(cookieValue(request), sessionValue(accessToken));
 }
 
+function bearerValue(request) {
+  const raw = request.headers.authorization;
+  if (typeof raw !== 'string' || !raw.startsWith('Bearer ')) return undefined;
+  const supplied = raw.slice(7);
+  return supplied.length >= 24 && supplied.length <= MAX_TOKEN_LENGTH ? supplied : undefined;
+}
+
 function respond(response, status, headers = {}, body = '') {
   response.writeHead(status, { ...SECURITY_HEADERS, ...headers, 'content-length': Buffer.byteLength(body) });
   response.end(body);
@@ -175,7 +189,7 @@ function serveStatic(response, file, mime) {
 
 export function createPortalServer(environment = process.env) {
   const accessToken = environment.PORTAL_ACCESS_TOKEN;
-  if (!text(accessToken) || accessToken.length < 24 || accessToken.length > MAX_TOKEN_LENGTH) {
+  if (typeof accessToken !== 'string' || accessToken.length < 24 || accessToken.length > MAX_TOKEN_LENGTH) {
     throw new TypeError('PORTAL_ACCESS_TOKEN must contain at least 24 characters');
   }
 
@@ -188,17 +202,13 @@ export function createPortalServer(environment = process.env) {
       return;
     }
 
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      notFound(response);
-      return;
-    }
-
     if (url.pathname === '/healthz') {
       const current = readArtifact(environment);
       json(response, current.ok ? 200 : 503, {
         service: 'tryaba-private-delivery',
         ready: current.ok,
         artifact_state: current.ok ? current.artifact.state : 'invalid',
+        authority_state: 'not_connected',
       });
       return;
     }
@@ -211,21 +221,28 @@ export function createPortalServer(environment = process.env) {
       return;
     }
 
-    const entry = url.pathname.match(/^\/enter\/([^/]+)$/u);
-    if (entry) {
-      let supplied;
-      try { supplied = decodeURIComponent(entry[1]); } catch { supplied = ''; }
-      if (!safeEqual(supplied, accessToken)) {
+    if (request.method === 'POST' && url.pathname === '/session') {
+      if (!safeEqual(bearerValue(request), accessToken)) {
         notFound(response);
         return;
       }
-      response.writeHead(303, {
+      response.writeHead(204, {
         ...SECURITY_HEADERS,
-        location: '/mail',
-        'set-cookie': `${COOKIE}=${sessionValue(accessToken)}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=604800`,
+        'set-cookie': `${COOKIE}=${sessionValue(accessToken)}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=1800`,
         'content-length': 0,
       });
       response.end();
+      return;
+    }
+
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      notFound(response);
+      return;
+    }
+
+    const entryFile = ENTRY_FILES[url.pathname];
+    if (entryFile) {
+      serveStatic(response, entryFile[0], entryFile[1]);
       return;
     }
 

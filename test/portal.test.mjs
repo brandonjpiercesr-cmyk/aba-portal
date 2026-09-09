@@ -50,22 +50,25 @@ test('private routes conceal themselves without an authenticated session', async
     const response = await fetch(origin + path, { redirect: 'manual' });
     assert.equal(response.status, 404, path);
   }
+  for (const path of ['/enter', '/assets/entry.css', '/assets/entry.js']) {
+    assert.equal((await fetch(origin + path)).status, 200, path);
+  }
 });
 
-test('the private link exchanges once for a secure same-site session', async () => {
+test('the fragment gate exchanges a bearer header for a short secure session', async () => {
   const origin = await start();
-  const entry = await fetch(`${origin}/enter/${TOKEN}`, { redirect: 'manual' });
-  assert.equal(entry.status, 303);
-  assert.equal(entry.headers.get('location'), '/mail');
+  const entry = await fetch(`${origin}/session`, { method: 'POST', headers: { authorization: `Bearer ${TOKEN}` } });
+  assert.equal(entry.status, 204);
   const cookie = entry.headers.get('set-cookie');
   assert.match(cookie, /^__Host-tryaba_private_delivery=/);
   assert.match(cookie, /Secure/);
   assert.match(cookie, /HttpOnly/);
   assert.match(cookie, /SameSite=Strict/);
+  assert.match(cookie, /Max-Age=1800/);
 
   const page = await fetch(origin + '/mail', { headers: { cookie } });
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /Your delivery has not arrived yet/);
+  assert.match(await page.text(), /No authorized artifact is available/);
   assert.equal(page.headers.get('cache-control'), 'private, no-store, max-age=0');
   assert.equal(page.headers.get('x-frame-options'), 'DENY');
 });
@@ -86,6 +89,7 @@ test('the artifact contract preserves supplied wording and order', () => {
     schema: 'tryaba.private-delivery.v1',
     state: 'ready',
     recipient: 'Dr. Eric',
+    byline: "A'nu A'new",
     title: 'A letter that arrived from its actual author',
     issued_at: '2026-09-09T22:10:00.000Z',
     provenance: provenance(),
@@ -100,7 +104,7 @@ test('the artifact contract preserves supplied wording and order', () => {
 test('the artifact contract rejects another recipient and extra fields', () => {
   const base = {
     schema: 'tryaba.private-delivery.v1', state: 'ready', recipient: 'Someone else',
-    title: 'Title', issued_at: '2026-09-09T22:10:00.000Z',
+    byline: "A'nu A'new", title: 'Title', issued_at: '2026-09-09T22:10:00.000Z',
     provenance: provenance(),
     sections: [{ heading: 'Heading', body: 'Body' }],
   };
@@ -108,19 +112,19 @@ test('the artifact contract rejects another recipient and extra fields', () => {
   assert.equal(validateArtifact({ ...base, recipient: 'Dr. Eric', invented: true }, 'Dr. Eric'), undefined);
 });
 
-test('authorized API returns the configured artifact without HTML interpretation', async () => {
+test('a syntactically valid configured artifact remains unavailable without real authority', async () => {
   const artifact = {
     schema: 'tryaba.private-delivery.v1', state: 'ready', recipient: 'Dr. Eric',
-    title: '<strong>Exact title</strong>', issued_at: '2026-09-09T22:10:00.000Z',
+    byline: "A'nu A'new", title: '<strong>Exact title</strong>', issued_at: '2026-09-09T22:10:00.000Z',
     provenance: provenance({ expression_receipt_id: 'expression.receipt.123' }),
     sections: [{ heading: '<em>Heading</em>', body: '<script>not executed</script>' }],
   };
   const origin = await start(authorizedEnvironment(artifact));
-  const entry = await fetch(`${origin}/enter/${TOKEN}`, { redirect: 'manual' });
+  const entry = await fetch(`${origin}/session`, { method: 'POST', headers: { authorization: `Bearer ${TOKEN}` } });
   const response = await fetch(origin + '/api/artifact', { headers: { cookie: entry.headers.get('set-cookie') } });
-  assert.equal(response.status, 200);
-  const payload = await response.json();
-  assert.deepEqual(payload.artifact, artifact);
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { ok: false, state: 'unavailable' });
+  assert.equal(readArtifact(authorizedEnvironment(artifact)).code, 'ARTIFACT_AUTHORITY_NOT_CONNECTED');
 });
 
 test('health distinguishes an invalid configured artifact from a waiting portal', async () => {
@@ -136,10 +140,25 @@ test('health distinguishes an invalid configured artifact from a waiting portal'
 test('artifact authority refuses a modified payload or mismatched trusted scope', () => {
   const artifact = {
     schema: 'tryaba.private-delivery.v1', state: 'ready', recipient: 'Dr. Eric',
-    title: 'Bound artifact', issued_at: '2026-09-09T22:10:00.000Z',
+    byline: "A'nu A'new", title: 'Bound artifact', issued_at: '2026-09-09T22:10:00.000Z',
     provenance: provenance(), sections: [{ heading: 'Heading', body: 'Exact body.' }],
   };
   const environment = authorizedEnvironment(artifact);
   assert.equal(readArtifact({ ...environment, PORTAL_ARTIFACT_JSON: environment.PORTAL_ARTIFACT_JSON + ' ' }).code, 'ARTIFACT_AUTHORITY_REFUSED');
   assert.equal(readArtifact({ ...environment, PORTAL_SCOPE_DIGEST: 'b'.repeat(64) }).code, 'ARTIFACT_AUTHORITY_REFUSED');
+});
+
+test('the preflight validator preserves long wording and any section count', () => {
+  const sections = Array.from({ length: 30 }, (_, index) => ({ heading: `Section ${index + 1}`, body: 'x'.repeat(25_000) }));
+  const artifact = {
+    schema: 'tryaba.private-delivery.v1', state: 'ready', recipient: 'Dr. Eric', byline: "A'nu A'new",
+    title: 'No invented cap', issued_at: '2026-09-09T22:10:00.000Z', provenance: provenance(), sections,
+  };
+  assert.deepEqual(validateArtifact(artifact, 'Dr. Eric'), artifact);
+});
+
+test('the public entry page contains no static recipient or machine identity claim', async () => {
+  const origin = await start();
+  const html = await (await fetch(origin + '/enter')).text();
+  assert.doesNotMatch(html, /Eric|wonder\.anu|receipt|one recipient/i);
 });

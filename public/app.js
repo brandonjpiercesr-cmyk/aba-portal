@@ -19,15 +19,8 @@ function setText(selector, value) {
 
 function renderArtifact(artifact) {
   setText('#recipient', artifact.recipient);
+  setText('#byline', artifact.byline);
   setText('#artifact-title', artifact.title);
-  setText('#speaker', artifact.provenance.speaker);
-  setText('#receipt-id', artifact.provenance.expression_receipt_id);
-  setText('#snapshot-receipt-id', artifact.provenance.snapshot_receipt_id);
-  setText('#verification-receipt-id', artifact.provenance.verification_receipt_id);
-  setText('#session-receipt-id', artifact.provenance.session_receipt_id);
-  setText('#session-readback-receipt-id', artifact.provenance.session_readback_receipt_id);
-  setText('#relationship-receipt-id', artifact.provenance.relationship_authority_receipt_id);
-  setText('#scope-digest', artifact.provenance.scope_digest);
   setText('#issued-at', new Intl.DateTimeFormat(undefined, {
     dateStyle: 'long', timeStyle: 'short',
   }).format(new Date(artifact.issued_at)));
