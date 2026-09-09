@@ -37,8 +37,8 @@ afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
 });
 
-async function start(environment = {}) {
-  const server = createPortalServer({ PORTAL_ACCESS_TOKEN: TOKEN, PORTAL_EXPECTED_RECIPIENT: 'Dr. Eric', ...environment });
+async function start(environment = {}, clock = Date.now) {
+  const server = createPortalServer({ PORTAL_ACCESS_TOKEN: TOKEN, PORTAL_EXPECTED_RECIPIENT: 'Dr. Eric', ...environment }, clock);
   servers.push(server);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   return `http://127.0.0.1:${server.address().port}`;
@@ -68,7 +68,7 @@ test('the fragment gate exchanges a bearer header for a short secure session', a
 
   const page = await fetch(origin + '/mail', { headers: { cookie } });
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /No authorized artifact is available/);
+  assert.match(await page.text(), /Nothing is waiting here yet/);
   assert.equal(page.headers.get('cache-control'), 'private, no-store, max-age=0');
   assert.equal(page.headers.get('x-frame-options'), 'DENY');
 });
@@ -160,5 +160,17 @@ test('the preflight validator preserves long wording and any section count', () 
 test('the public entry page contains no static recipient or machine identity claim', async () => {
   const origin = await start();
   const html = await (await fetch(origin + '/enter')).text();
-  assert.doesNotMatch(html, /Eric|wonder\.anu|receipt|one recipient/i);
+  const entry = await fetch(origin + '/session', { method: 'POST', headers: { authorization: `Bearer ${TOKEN}` } });
+  const privatePage = await (await fetch(origin + '/mail', { headers: { cookie: entry.headers.get('set-cookie') } })).text();
+  assert.doesNotMatch(html + privatePage, /Eric|wonder\.anu|receipt|one recipient|artifact|shell|server|fragment|authenticated session/i);
+});
+
+test('the server refuses a captured session after 30 minutes', async () => {
+  let now = Date.parse('2026-09-09T22:10:00.000Z');
+  const origin = await start({}, () => now);
+  const entry = await fetch(origin + '/session', { method: 'POST', headers: { authorization: `Bearer ${TOKEN}` } });
+  const cookie = entry.headers.get('set-cookie');
+  assert.equal((await fetch(origin + '/mail', { headers: { cookie } })).status, 200);
+  now += 30 * 60 * 1000 + 1000;
+  assert.equal((await fetch(origin + '/mail', { headers: { cookie } })).status, 404);
 });

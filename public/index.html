@@ -34,14 +34,14 @@
           <div class="window-bar">
             <span class="window-bar__light" aria-hidden="true"></span>
             <span>Private delivery</span>
-            <span class="window-bar__seal">Protected</span>
+            <span class="window-bar__status">Protected</span>
           </div>
 
           <div class="mail-stage" id="loading-state">
             <div class="envelope" aria-hidden="true">
               <svg viewBox="0 0 72 72"><path d="M8 20h56v36H8z"/><path d="m9 22 27 21 27-21"/><path d="m9 55 20-19M63 55 43 36"/></svg>
             </div>
-            <p class="eyebrow">Checking the seal</p>
+            <p class="eyebrow">Private access</p>
             <h1 id="portal-title">Opening your private space</h1>
           </div>
 
@@ -50,27 +50,27 @@
               <svg viewBox="0 0 72 72"><path d="M8 20h56v36H8z"/><path d="m9 22 27 21 27-21"/><path d="m9 55 20-19M63 55 43 36"/></svg>
             </div>
             <p class="eyebrow">Private space ready</p>
-            <h1>No authorized artifact is available.</h1>
-            <p class="lede">This shell will remain empty until the server verifies an authorized final artifact.</p>
-            <div class="truth-line"><span></span> Nothing is being represented as authored, addressed, or delivered.</div>
+            <h1>Nothing is waiting here yet.</h1>
+            <p class="lede">If something is sent to this space, it will appear after it has been confirmed.</p>
+            <div class="truth-line"><span></span> There is no message here now.</div>
           </div>
 
           <div class="letter" id="ready-state" hidden>
             <div class="letter__masthead">
               <p class="eyebrow">A private delivery for <span id="recipient"></span></p>
-              <h1 id="artifact-title"></h1>
+              <h1 id="letter-title"></h1>
               <dl class="provenance">
                 <div><dt>Presented by</dt><dd id="byline"></dd></div>
                 <div><dt>Issued</dt><dd id="issued-at"></dd></div>
               </dl>
             </div>
-            <div class="letter__sections" id="artifact-sections"></div>
+            <div class="letter__sections" id="letter-sections"></div>
           </div>
 
           <div class="mail-stage" id="error-state" hidden>
-            <p class="eyebrow">Delivery unavailable</p>
-            <h1>The seal could not be verified.</h1>
-            <p class="lede">Nothing was opened or represented as delivered. Please return to the person who sent your private link.</p>
+            <p class="eyebrow">Private space unavailable</p>
+            <h1>This space could not be opened.</h1>
+            <p class="lede">Please return to the person who sent your private link.</p>
           </div>
         </article>
       </section>
@@ -78,13 +78,13 @@
       <aside class="rail rail--right" aria-label="Private delivery rail">
         <span class="rail__dot"></span>
         <span class="rail__line"></span>
-        <span class="rail__label">Receipt required</span>
+        <span class="rail__label">Private</span>
       </aside>
 
       <footer class="rail rail--bottom">
         <span>Private correspondence</span>
-        <span class="footer__center">Authenticated session</span>
-        <span id="artifact-status">Verifying</span>
+        <span class="footer__center">Private access</span>
+        <span id="delivery-status">Opening</span>
       </footer>
     </main>
     <script type="module" src="/assets/app.js"></script>

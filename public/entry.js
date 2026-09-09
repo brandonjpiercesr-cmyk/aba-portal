@@ -4,7 +4,7 @@ history.replaceState(null, '', '/enter');
 
 try {
   token = decodeURIComponent(token);
-  if (token.length < 24 || token.length > 512) throw new Error('invalid');
+  if (!token) throw new Error('invalid');
   const response = await fetch('/session', {
     method: 'POST',
     credentials: 'same-origin',

@@ -8,8 +8,8 @@ const states = {
 function show(name) {
   for (const [key, node] of Object.entries(states)) node.hidden = key !== name;
   document.querySelector('#mail-window').setAttribute('aria-busy', name === 'loading' ? 'true' : 'false');
-  document.querySelector('#artifact-status').textContent = {
-    loading: 'Verifying', awaiting: 'Awaiting delivery', ready: 'Verified', error: 'Unavailable',
+  document.querySelector('#delivery-status').textContent = {
+    loading: 'Opening', awaiting: 'Nothing waiting', ready: 'Available', error: 'Unavailable',
   }[name];
 }
 
@@ -20,12 +20,12 @@ function setText(selector, value) {
 function renderArtifact(artifact) {
   setText('#recipient', artifact.recipient);
   setText('#byline', artifact.byline);
-  setText('#artifact-title', artifact.title);
+  setText('#letter-title', artifact.title);
   setText('#issued-at', new Intl.DateTimeFormat(undefined, {
     dateStyle: 'long', timeStyle: 'short',
   }).format(new Date(artifact.issued_at)));
 
-  const sections = document.querySelector('#artifact-sections');
+  const sections = document.querySelector('#letter-sections');
   sections.replaceChildren();
   for (const item of artifact.sections) {
     const section = document.createElement('section');

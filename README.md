@@ -2,7 +2,7 @@
 
 This is the bounded TEMP frontend requested by Brandon at 2:16:55 in the September 9, 2026 raw transcript. It borrows the existing CIB's one-frame, five-zone visual shell and provides one protected delivery window.
 
-The entry link carries its bearer value in the URL fragment (`/enter#…`). Browser fragments are not sent in HTTP requests, so the server does not receive the bearer in the request URL. Entry JavaScript immediately removes the fragment from the current history entry and posts it in the authorization header for a secure, HTTP-only, same-site session cookie that lasts 30 minutes. The bearer remains reusable until it is rotated and may still exist in the sender's records or the recipient's earlier browser history. The portal therefore makes no one-time or one-recipient claim.
+The entry link carries its bearer value in the URL fragment (`/enter#…`). Browser fragments are not sent in HTTP requests, so the server does not receive the bearer in the request URL. Entry JavaScript immediately removes the fragment from the current history entry and posts it in the authorization header for a secure, HTTP-only, same-site session cookie. The cookie contains a server-signed issue time, and the server refuses it after 30 minutes even if somebody captured and replayed the cookie value. The bearer remains reusable until it is rotated and may still exist in the sender's records or the recipient's earlier browser history. The portal therefore makes no one-time or one-recipient claim.
 
 Every letter page, letter asset, and artifact response requires that session. Public routes are limited to the neutral entry page and its two assets, `/healthz`, and `/releasez`.
 
@@ -12,7 +12,7 @@ The validator does not invent a word, character, or section cap. Any real transp
 
 ## Required environment
 
-- `PORTAL_ACCESS_TOKEN`: 24–512 characters; never place it in source or a user-facing receipt. Rotate it to revoke previously issued entry links.
+- `PORTAL_ACCESS_TOKEN`: at least 24 characters; never place it in source or a user-facing receipt. Rotate it to revoke previously issued entry links.
 - `PORTAL_EXPECTED_RECIPIENT`: defaults to `Dr. Eric`.
 - `PORTAL_ARTIFACT_JSON`: optional until the actual authorized artifact exists.
 - `PORTAL_ARTIFACT_SHA256`: lowercase SHA-256 of the exact configured JSON string; preflight only and not proof of authorship.

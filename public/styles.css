@@ -161,7 +161,7 @@ button, input, textarea, select { font: inherit; }
 }
 
 .window-bar__light { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--violet); box-shadow: 0 0 1rem var(--violet); }
-.window-bar__seal { justify-self: end; padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; }
+.window-bar__status { justify-self: end; padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; }
 
 .mail-stage {
   display: flex;

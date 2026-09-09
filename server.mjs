@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { createReadStream, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join } from 'node:path';
@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PUBLIC = join(ROOT, 'public');
 const COOKIE = '__Host-tryaba_private_delivery';
-const MAX_TOKEN_LENGTH = 512;
+const SESSION_SECONDS = 30 * 60;
+const CLOCK_SKEW_SECONDS = 30;
 
 const SECURITY_HEADERS = Object.freeze({
   'cache-control': 'private, no-store, max-age=0',
@@ -37,7 +38,7 @@ function text(value) {
 }
 
 function receipt(value) {
-  return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:/-]{2,255}$/u.test(value);
+  return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:/-]+$/u.test(value);
 }
 
 function sha256Hex(value) {
@@ -134,12 +135,15 @@ export function readArtifact(environment = process.env) {
   return Object.freeze({ ok: false, code: 'ARTIFACT_AUTHORITY_NOT_CONNECTED' });
 }
 
-function digest(value) {
-  return createHash('sha256').update(value).digest();
+function sessionSignature(accessToken, issuedAt) {
+  return createHmac('sha256', accessToken)
+    .update(`tryaba-private-delivery\u0000${issuedAt}`)
+    .digest('base64url');
 }
 
-function sessionValue(accessToken) {
-  return digest(`tryaba-private-delivery\u0000${accessToken}`).toString('base64url');
+function sessionValue(accessToken, nowMs) {
+  const issuedAt = Math.floor(nowMs / 1000).toString(36);
+  return `${issuedAt}.${sessionSignature(accessToken, issuedAt)}`;
 }
 
 function safeEqual(left, right) {
@@ -151,20 +155,28 @@ function safeEqual(left, right) {
 
 function cookieValue(request) {
   const raw = request.headers.cookie || '';
-  if (raw.length > 4096) return undefined;
   const matches = raw.split(';').map((part) => part.trim()).filter((part) => part.startsWith(`${COOKIE}=`));
   return matches.length === 1 ? matches[0].slice(COOKIE.length + 1) : undefined;
 }
 
-function authorized(request, accessToken) {
-  return safeEqual(cookieValue(request), sessionValue(accessToken));
+function authorized(request, accessToken, nowMs) {
+  const supplied = cookieValue(request);
+  if (typeof supplied !== 'string') return false;
+  const parts = supplied.split('.');
+  if (parts.length !== 2 || !/^[0-9a-z]+$/u.test(parts[0])) return false;
+  const issuedAtSeconds = Number.parseInt(parts[0], 36);
+  const nowSeconds = Math.floor(nowMs / 1000);
+  if (!Number.isSafeInteger(issuedAtSeconds)
+    || issuedAtSeconds > nowSeconds + CLOCK_SKEW_SECONDS
+    || nowSeconds - issuedAtSeconds > SESSION_SECONDS) return false;
+  return safeEqual(parts[1], sessionSignature(accessToken, parts[0]));
 }
 
 function bearerValue(request) {
   const raw = request.headers.authorization;
   if (typeof raw !== 'string' || !raw.startsWith('Bearer ')) return undefined;
   const supplied = raw.slice(7);
-  return supplied.length >= 24 && supplied.length <= MAX_TOKEN_LENGTH ? supplied : undefined;
+  return supplied || undefined;
 }
 
 function respond(response, status, headers = {}, body = '') {
@@ -187,9 +199,9 @@ function serveStatic(response, file, mime) {
   createReadStream(fullPath).pipe(response);
 }
 
-export function createPortalServer(environment = process.env) {
+export function createPortalServer(environment = process.env, clock = Date.now) {
   const accessToken = environment.PORTAL_ACCESS_TOKEN;
-  if (typeof accessToken !== 'string' || accessToken.length < 24 || accessToken.length > MAX_TOKEN_LENGTH) {
+  if (typeof accessToken !== 'string' || accessToken.length < 24) {
     throw new TypeError('PORTAL_ACCESS_TOKEN must contain at least 24 characters');
   }
 
@@ -228,7 +240,7 @@ export function createPortalServer(environment = process.env) {
       }
       response.writeHead(204, {
         ...SECURITY_HEADERS,
-        'set-cookie': `${COOKIE}=${sessionValue(accessToken)}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=1800`,
+        'set-cookie': `${COOKIE}=${sessionValue(accessToken, clock())}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${SESSION_SECONDS}`,
         'content-length': 0,
       });
       response.end();
@@ -246,7 +258,7 @@ export function createPortalServer(environment = process.env) {
       return;
     }
 
-    if (!authorized(request, accessToken)) {
+    if (!authorized(request, accessToken, clock())) {
       notFound(response);
       return;
     }
